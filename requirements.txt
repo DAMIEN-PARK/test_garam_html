@@ -1,0 +1,33 @@
+fastapi
+uvicorn[standard]
+aiofiles
+
+python-dotenv
+python-multipart
+
+SQLAlchemy
+alembic
+psycopg2-binary
+pgvector
+
+bcrypt
+python-jose
+email-validator
+
+apscheduler
+
+# RAG/문서
+langchain
+langchain-community
+langchain-text-splitters
+pymupdf
+
+# 프로바이더
+openai
+friendli-client
+
+## 프로바이더 추가 사용시 해제
+# langchain-anthropic==0.3.20
+# anthropic==0.68.0
+# langchain-google-genai==2.1.12
+# google-ai-generativelanguage==0.7.0
