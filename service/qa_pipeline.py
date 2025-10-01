@@ -15,12 +15,17 @@ from langchain_service.chain.qa_chain import make_qa_chain
 from langchain_service.embedding.get_vector import text_to_vector
 from crud import chat as crud_chat
 from crud import knowledge as crud_knowledge
-from langchain_service.llm.setup import get_llm
+from langchain_service.llm.setup import get_llm, llm_kwargs_for_model
 
 
 class QAPipeline:
     def __init__(self, provider="openai", model="gpt-4o", api_key=None, top_k=3):
-        self.llm = get_llm(provider, model, api_key=api_key)
+        llm_options = llm_kwargs_for_model(
+            fast_response_mode=False,
+            model_name=model,
+            provider_name=provider,
+        )
+        self.llm = get_llm(api_key=api_key, **llm_options)
         self.top_k = top_k
 
         self.prompt = PromptTemplate(

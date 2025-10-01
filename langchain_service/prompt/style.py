@@ -25,8 +25,3 @@ def build_system_prompt(style: Style, **flags) -> str:
         STYLE_MAP[style],
         policy_text(**flags)
     ])
-
-
-def llm_params(fast_response_mode: bool) -> dict:
-    # 필요 시 조정
-    return {"temperature": 0.2, "max_tokens": 512} if fast_response_mode else {"temperature": 0.3}
