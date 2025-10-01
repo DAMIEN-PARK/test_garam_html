@@ -45,6 +45,17 @@
             line-height: 1.6;
         }
 
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            border: 0;
+        }
+
         .admin-wrapper {
             display: flex;
             min-height: 100vh;
@@ -61,6 +72,7 @@
             z-index: 1000;
             display: flex;
             flex-direction: column;
+            transition: transform 0.3s ease;
         }
 
         .sidebar-header {
@@ -220,6 +232,27 @@
             display: flex;
             align-items: center;
             gap: 1rem;
+        }
+
+        .mobile-menu-btn {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: none;
+            background: var(--primary-light);
+            color: var(--primary-color);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .mobile-menu-btn:hover,
+        .mobile-menu-btn:focus-visible {
+            background: var(--primary-color);
+            color: white;
+            outline: none;
         }
 
         .page-title h1 {
@@ -524,10 +557,8 @@
             border-radius: 13px;
             cursor: pointer;
             transition: var(--transition);
-        }
-
-        .toggle.active {
-            background: var(--primary-color);
+            border: none;
+            padding: 0;
         }
 
         .toggle::after {
@@ -542,8 +573,17 @@
             transition: var(--transition);
         }
 
-        .toggle.active::after {
+        .toggle[aria-pressed="true"] {
+            background: var(--primary-color);
+        }
+
+        .toggle[aria-pressed="true"]::after {
             transform: translateX(24px);
+        }
+
+        .toggle:focus-visible {
+            outline: 3px solid var(--primary-light);
+            outline-offset: 2px;
         }
 
         /* 액션 버튼 */
@@ -556,13 +596,24 @@
 
         /* 반응형 */
         @media (max-width: 1024px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+
+            .sidebar.open {
+                transform: translateX(0);
+            }
+
             .main-content {
                 margin-left: 0;
             }
-            
-            .sidebar {
-                transform: translateX(-100%);
-                transition: transform 0.3s ease;
+
+            .top-header {
+                padding: 1rem 1.5rem;
+            }
+
+            .mobile-menu-btn {
+                display: inline-flex;
             }
         }
 
@@ -606,7 +657,7 @@
 <body>
     <div class="admin-wrapper">
         <!-- 왼쪽 사이드바 -->
-        <aside class="sidebar">
+        <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <div class="brand-logo">
                     <i class="fas fa-microchip"></i>
@@ -681,15 +732,19 @@
             <!-- 상단 헤더 -->
             <header class="top-header">
                 <div class="header-left">
+                    <button type="button" class="mobile-menu-btn" aria-controls="sidebar" aria-expanded="false">
+                        <span class="sr-only">사이드바 열기/닫기</span>
+                        <i class="fas fa-bars"></i>
+                    </button>
                     <div class="page-title">
                         <h1>AI 모델 설정</h1>
-                        <p class="page-subtitle">EXAONE 4.0 모델의 성능과 동작을 조정하여 최적의 응답을 생성하세요</p>
+                        <p class="page-subtitle" id="pageSubtitle">EXAONE 4.0 모델의 성능과 동작을 조정하여 최적의 응답을 생성하세요</p>
                     </div>
                 </div>
                 <div class="header-right">
                     <div class="status-indicator">
                         <div class="status-dot"></div>
-                        <span>EXAONE 4.0 활성</span>
+                        <span id="statusIndicatorText">EXAONE 4.0 활성</span>
                     </div>
                 </div>
             </header>
@@ -701,24 +756,24 @@
                         <h2 class="status-title">모델 운영 현황</h2>
                         <div class="status-badge">
                             <div class="status-dot"></div>
-                            <span>정상 운영중</span>
+                            <span id="statusBadgeText">정상 운영중</span>
                         </div>
                     </div>
                     <div class="simple-metrics">
                         <div class="metric-item">
-                            <div class="metric-value">94%</div>
+                            <div class="metric-value" id="accuracyValue">94%</div>
                             <div class="metric-label">응답 정확도</div>
                         </div>
                         <div class="metric-item">
-                            <div class="metric-value">1.2초</div>
+                            <div class="metric-value" id="responseTimeValue">1.2초</div>
                             <div class="metric-label">평균 응답시간</div>
                         </div>
                         <div class="metric-item">
-                            <div class="metric-value">847</div>
+                            <div class="metric-value" id="monthlyConversationValue">847</div>
                             <div class="metric-label">이번 달 처리 문의</div>
                         </div>
                         <div class="metric-item">
-                            <div class="metric-value">99.8%</div>
+                            <div class="metric-value" id="uptimeValue">99.8%</div>
                             <div class="metric-label">모델 가동률</div>
                         </div>
                     </div>
@@ -736,17 +791,17 @@
                                 <i class="fas fa-star"></i>
                             </div>
                             <div class="model-info">
-                                <div class="model-name">EXAONE 4.0</div>
-                                <div class="model-provider">LG AI Research</div>
+                                <div class="model-name" id="modelName">EXAONE 4.0</div>
+                                <div class="model-provider" id="modelProvider">LG AI Research</div>
                             </div>
                         </div>
-                        
-                        <div class="model-description">
-                            한국 최초 하이브리드 AI 모델로 자연어 처리와 추론 능력을 통합하여 제공합니다. 
+
+                        <div class="model-description" id="modelDescription">
+                            한국 최초 하이브리드 AI 모델로 자연어 처리와 추론 능력을 통합하여 제공합니다.
                             한국어에 특화되어 기술지원에 최적화되었으며, 높은 정확도와 빠른 응답 속도를 자랑합니다.
                         </div>
 
-                        <div class="model-features">
+                        <div class="model-features" id="modelFeatures">
                             <span class="feature-tag">한국어 특화</span>
                             <span class="feature-tag">하이브리드 추론</span>
                             <span class="feature-tag">기술지원 최적화</span>
@@ -799,14 +854,18 @@
                                     <h4>부적절한 질문 차단</h4>
                                     <div class="toggle-description">욕설, 스팸 자동 차단</div>
                                 </div>
-                                <div class="toggle active"></div>
+                                <button type="button" class="toggle" data-setting="block_inappropriate" aria-pressed="true">
+                                    <span class="sr-only">부적절한 질문 차단 설정</span>
+                                </button>
                             </div>
                             <div class="toggle-switch">
                                 <div class="toggle-info">
                                     <h4>기술 외 문의 제한</h4>
                                     <div class="toggle-description">기술지원 외 주제 응답 제한</div>
                                 </div>
-                                <div class="toggle active"></div>
+                                <button type="button" class="toggle" data-setting="restrict_non_tech" aria-pressed="true">
+                                    <span class="sr-only">기술 외 문의 제한 설정</span>
+                                </button>
                             </div>
                         </div>
 
@@ -815,27 +874,31 @@
                                 <i class="fas fa-clock"></i>
                                 응답 최적화
                             </div>
-                            <div class="toggle-switch">
-                                <div class="toggle-info">
-                                    <h4>빠른 응답 모드</h4>
-                                    <div class="toggle-description">간단한 질문에 즉시 답변</div>
+                                <div class="toggle-switch">
+                                    <div class="toggle-info">
+                                        <h4>빠른 응답 모드</h4>
+                                        <div class="toggle-description">간단한 질문에 즉시 답변</div>
+                                    </div>
+                                    <button type="button" class="toggle" data-setting="fast_response_mode" aria-pressed="true">
+                                        <span class="sr-only">빠른 응답 모드 설정</span>
+                                    </button>
                                 </div>
-                                <div class="toggle active"></div>
-                            </div>
-                            <div class="toggle-switch">
-                                <div class="toggle-info">
-                                    <h4>상담원 연결 추천</h4>
-                                    <div class="toggle-description">복잡한 문의시 상담원 연결 안내</div>
+                                <div class="toggle-switch">
+                                    <div class="toggle-info">
+                                        <h4>상담원 연결 추천</h4>
+                                        <div class="toggle-description">복잡한 문의시 상담원 연결 안내</div>
+                                    </div>
+                                    <button type="button" class="toggle" data-setting="suggest_agent_handoff" aria-pressed="true">
+                                        <span class="sr-only">상담원 연결 추천 설정</span>
+                                    </button>
                                 </div>
-                                <div class="toggle active"></div>
                             </div>
-                        </div>
                     </div>
                 </div>
 
                 <!-- 액션 버튼 -->
                 <div class="actions">
-                    <button class="btn btn-secondary">
+                    <button class="btn btn-secondary" id="resetBtn" type="button">
                         <i class="fas fa-undo"></i>
                         기본값 복원
                     </button>
@@ -849,37 +912,394 @@
     </div>
 
     <script>
-        // 토글 스위치 기능
-        document.querySelectorAll('.toggle').forEach(toggle => {
-            toggle.addEventListener('click', function() {
-                this.classList.toggle('active');
-                
-                const settingName = this.parentNode.querySelector('h4').textContent;
-                const isActive = this.classList.contains('active');
-                console.log(`${settingName}: ${isActive ? '활성화' : '비활성화'}`);
+        const API_BASE_URL = localStorage.getItem('garam_api_base_url') || 'http://localhost:5000';
+
+        function buildApiUrl(path = '') {
+            const base = API_BASE_URL.endsWith('/') ? API_BASE_URL.slice(0, -1) : API_BASE_URL;
+            if (!path) {
+                return base;
+            }
+            return `${base}${path.startsWith('/') ? path : `/${path}`}`;
+        }
+
+        async function fetchJSON(url, options = {}) {
+            const opts = { ...options };
+            opts.headers = { ...(options.headers || {}) };
+
+            if (opts.body && !(opts.body instanceof FormData) && typeof opts.body !== 'string') {
+                if (!opts.headers['Content-Type']) {
+                    opts.headers['Content-Type'] = 'application/json';
+                }
+                opts.body = JSON.stringify(opts.body);
+            }
+
+            try {
+                const response = await fetch(url, opts);
+                const text = await response.text();
+
+                if (!response.ok) {
+                    let message = `HTTP ${response.status}`;
+                    if (text) {
+                        try {
+                            const parsed = JSON.parse(text);
+                            message = parsed?.detail || parsed?.message || message;
+                        } catch (parseError) {
+                            message = text;
+                        }
+                    }
+                    const error = new Error(message);
+                    error.status = response.status;
+                    throw error;
+                }
+
+                if (!text) {
+                    return null;
+                }
+
+                try {
+                    return JSON.parse(text);
+                } catch (parseError) {
+                    return null;
+                }
+            } catch (error) {
+                if (error instanceof Error) {
+                    throw error;
+                }
+                const fallback = new Error('네트워크 오류가 발생했습니다.');
+                fallback.status = 0;
+                throw fallback;
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const sidebar = document.getElementById('sidebar');
+            const mobileMenuBtn = document.querySelector('.mobile-menu-btn');
+            const mainContent = document.querySelector('.main-content');
+
+            const closeSidebar = () => {
+                if (sidebar && sidebar.classList.contains('open')) {
+                    sidebar.classList.remove('open');
+                    if (mobileMenuBtn) {
+                        mobileMenuBtn.setAttribute('aria-expanded', 'false');
+                    }
+                }
+            };
+
+            if (mobileMenuBtn && sidebar) {
+                mobileMenuBtn.addEventListener('click', () => {
+                    const isOpen = sidebar.classList.toggle('open');
+                    mobileMenuBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+                });
+            }
+
+            if (mainContent) {
+                mainContent.addEventListener('click', () => {
+                    if (window.innerWidth <= 1024) {
+                        closeSidebar();
+                    }
+                });
+            }
+
+            if (sidebar) {
+                sidebar.querySelectorAll('.nav-link').forEach(link => {
+                    link.addEventListener('click', () => {
+                        if (window.innerWidth <= 1024) {
+                            closeSidebar();
+                        }
+                    });
+                });
+            }
+
+            window.addEventListener('resize', () => {
+                if (window.innerWidth > 1024) {
+                    closeSidebar();
+                }
             });
+
+            document.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape') {
+                    closeSidebar();
+                }
+            });
+
+            const elements = {
+                statusIndicatorText: document.getElementById('statusIndicatorText'),
+                statusBadgeText: document.getElementById('statusBadgeText'),
+                accuracyValue: document.getElementById('accuracyValue'),
+                responseTimeValue: document.getElementById('responseTimeValue'),
+                monthlyConversationValue: document.getElementById('monthlyConversationValue'),
+                uptimeValue: document.getElementById('uptimeValue'),
+                modelName: document.getElementById('modelName'),
+                modelProvider: document.getElementById('modelProvider'),
+                modelDescription: document.getElementById('modelDescription'),
+                modelFeatures: document.getElementById('modelFeatures'),
+                responseStyle: document.getElementById('responseStyle'),
+                pageSubtitle: document.getElementById('pageSubtitle'),
+                saveButton: document.getElementById('saveBtn'),
+                resetButton: document.getElementById('resetBtn'),
+            };
+
+            const toggleButtons = Array.from(document.querySelectorAll('.toggle[data-setting]'));
+
+            const state = {
+                activeModelId: null,
+                initialSettings: null,
+                modelName: 'AI 모델',
+            };
+
+            const setToggleState = (button, value) => {
+                button.setAttribute('aria-pressed', value ? 'true' : 'false');
+            };
+
+            const gatherCurrentSettings = () => {
+                const settings = {
+                    response_style: elements.responseStyle ? elements.responseStyle.value : 'professional',
+                };
+                toggleButtons.forEach(button => {
+                    const key = button.dataset.setting;
+                    settings[key] = button.getAttribute('aria-pressed') === 'true';
+                });
+                return settings;
+            };
+
+            const applySettings = (settings = {}) => {
+                if (elements.responseStyle) {
+                    const value = settings.response_style ?? 'professional';
+                    elements.responseStyle.value = value;
+                }
+                toggleButtons.forEach(button => {
+                    const key = button.dataset.setting;
+                    const value = settings[key] ?? false;
+                    setToggleState(button, Boolean(value));
+                });
+            };
+
+            const formatPercentage = (value) => {
+                const num = Number(value);
+                if (!Number.isFinite(num) || num < 0) {
+                    return '-';
+                }
+                const formatted = Number.isInteger(num) ? num.toFixed(0) : num.toFixed(1);
+                return `${formatted}%`;
+            };
+
+            const formatResponseTime = (ms) => {
+                const value = Number(ms);
+                if (!Number.isFinite(value) || value <= 0) {
+                    return '-';
+                }
+                if (value >= 1000) {
+                    const seconds = value / 1000;
+                    const formatted = Number.isInteger(seconds) ? seconds.toFixed(0) : seconds.toFixed(1);
+                    return `${formatted}초`;
+                }
+                return `${Math.round(value)}ms`;
+            };
+
+            const formatNumber = (value) => {
+                const num = Number(value);
+                if (!Number.isFinite(num)) {
+                    return '-';
+                }
+                return num.toLocaleString('ko-KR');
+            };
+
+            const formatFeature = (feature) => {
+                if (typeof feature === 'string') {
+                    return feature;
+                }
+                if (typeof feature === 'number' || typeof feature === 'boolean') {
+                    return String(feature);
+                }
+                if (feature && typeof feature === 'object') {
+                    if (typeof feature.name === 'string') {
+                        return feature.name;
+                    }
+                    if (typeof feature.label === 'string') {
+                        return feature.label;
+                    }
+                    try {
+                        return JSON.stringify(feature);
+                    } catch (error) {
+                        return '기능';
+                    }
+                }
+                return '기능';
+            };
+
+            const renderFeatures = (features) => {
+                if (!elements.modelFeatures) {
+                    return;
+                }
+                elements.modelFeatures.innerHTML = '';
+
+                if (!Array.isArray(features) || features.length === 0) {
+                    const tag = document.createElement('span');
+                    tag.className = 'feature-tag';
+                    tag.textContent = '등록된 기능 없음';
+                    elements.modelFeatures.appendChild(tag);
+                    return;
+                }
+
+                features.forEach((feature) => {
+                    const tag = document.createElement('span');
+                    tag.className = 'feature-tag';
+                    tag.textContent = formatFeature(feature);
+                    elements.modelFeatures.appendChild(tag);
+                });
+            };
+
+            const applyModelData = (model, updateBaseline = false) => {
+                if (!model) {
+                    return;
+                }
+
+                if (typeof model.id === 'number') {
+                    state.activeModelId = model.id;
+                }
+
+                state.modelName = model.name || 'AI 모델';
+
+                if (elements.modelName) {
+                    elements.modelName.textContent = state.modelName;
+                }
+                if (elements.modelProvider) {
+                    elements.modelProvider.textContent = model.provider_name || '제공자 정보 없음';
+                }
+                if (elements.modelDescription) {
+                    elements.modelDescription.textContent = model.description || '모델 설명이 등록되지 않았습니다.';
+                }
+
+                renderFeatures(model.features);
+
+                if (elements.pageSubtitle) {
+                    elements.pageSubtitle.textContent = `${state.modelName} 모델의 성능과 동작을 조정하여 최적의 응답을 생성하세요`;
+                }
+
+                const statusLabel = model.is_active === false ? '비활성' : '활성';
+                if (elements.statusIndicatorText) {
+                    elements.statusIndicatorText.textContent = `${state.modelName} ${statusLabel}`;
+                }
+                if (elements.statusBadgeText) {
+                    elements.statusBadgeText.textContent = model.status_text || '상태 정보 없음';
+                }
+
+                if (elements.accuracyValue) {
+                    elements.accuracyValue.textContent = formatPercentage(model.accuracy);
+                }
+                if (elements.responseTimeValue) {
+                    elements.responseTimeValue.textContent = formatResponseTime(model.avg_response_time_ms);
+                }
+                if (elements.monthlyConversationValue) {
+                    elements.monthlyConversationValue.textContent = formatNumber(model.month_conversations);
+                }
+                if (elements.uptimeValue) {
+                    elements.uptimeValue.textContent = formatPercentage(model.uptime_percent);
+                }
+
+                applySettings({
+                    response_style: model.response_style,
+                    block_inappropriate: model.block_inappropriate,
+                    restrict_non_tech: model.restrict_non_tech,
+                    fast_response_mode: model.fast_response_mode,
+                    suggest_agent_handoff: model.suggest_agent_handoff,
+                });
+
+                if (updateBaseline) {
+                    state.initialSettings = gatherCurrentSettings();
+                }
+            };
+
+            toggleButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const nextState = button.getAttribute('aria-pressed') !== 'true';
+                    setToggleState(button, nextState);
+                });
+            });
+
+            const loadActiveModel = async () => {
+                try {
+                    const model = await fetchJSON(buildApiUrl('/models/active'));
+                    if (!model) {
+                        throw new Error('활성화된 모델 정보를 찾을 수 없습니다.');
+                    }
+                    applyModelData(model, true);
+                    showNotification(`${state.modelName} 모델 설정이 준비되었습니다.`, 'success');
+                } catch (error) {
+                    console.error('활성 모델 정보를 불러오는 중 오류가 발생했습니다.', error);
+                    showNotification(error?.message || '활성 모델 정보를 불러오지 못했습니다.', 'error');
+                }
+            };
+
+            if (elements.resetButton) {
+                elements.resetButton.addEventListener('click', () => {
+                    if (!state.initialSettings) {
+                        showNotification('복원할 기본값이 없습니다. 먼저 모델 정보를 불러오세요.', 'warning');
+                        return;
+                    }
+                    applySettings(state.initialSettings);
+                    showNotification('설정을 기본값으로 복원했습니다.', 'info');
+                });
+            }
+
+            if (elements.saveButton) {
+                elements.saveButton.addEventListener('click', async function() {
+                    if (!state.activeModelId) {
+                        showNotification('활성 모델 정보를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.', 'error');
+                        return;
+                    }
+
+                    const button = this;
+                    const originalLabel = button.innerHTML;
+                    const originalBackground = button.style.background;
+                    button.disabled = true;
+                    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 저장 중...';
+
+                    const revertButton = () => {
+                        button.innerHTML = originalLabel;
+                        button.style.background = originalBackground || 'var(--primary-color)';
+                        button.disabled = false;
+                    };
+
+                    try {
+                        const currentSettings = gatherCurrentSettings();
+                        const payload = {
+                            response_style: currentSettings.response_style,
+                            block_inappropriate: currentSettings.block_inappropriate,
+                            restrict_non_tech: currentSettings.restrict_non_tech,
+                            fast_response_mode: currentSettings.fast_response_mode,
+                            suggest_agent_handoff: currentSettings.suggest_agent_handoff,
+                        };
+
+                        const updated = await fetchJSON(buildApiUrl(`/models/${state.activeModelId}`), {
+                            method: 'PATCH',
+                            body: payload,
+                        });
+
+                        if (updated) {
+                            applyModelData(updated, true);
+                        } else {
+                            state.initialSettings = gatherCurrentSettings();
+                        }
+
+                        button.innerHTML = '<i class="fas fa-check"></i> 저장 완료!';
+                        button.style.background = 'var(--accent-color)';
+                        showNotification('AI 모델 설정이 저장되었습니다. 변경사항이 즉시 적용됩니다.', 'success');
+
+                        setTimeout(() => {
+                            revertButton();
+                        }, 2000);
+                    } catch (error) {
+                        console.error('모델 설정 저장 중 오류가 발생했습니다.', error);
+                        showNotification(error?.message || '설정을 저장하지 못했습니다.', 'error');
+                        revertButton();
+                    }
+                });
+            }
+
+            loadActiveModel();
         });
 
-        // 설정 저장 기능
-        document.getElementById('saveBtn').addEventListener('click', function() {
-            this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 저장 중...';
-            this.disabled = true;
-
-            setTimeout(() => {
-                this.innerHTML = '<i class="fas fa-check"></i> 저장 완료!';
-                this.style.background = 'var(--accent-color)';
-                
-                setTimeout(() => {
-                    this.innerHTML = '<i class="fas fa-save"></i> 설정 저장';
-                    this.style.background = 'var(--primary-color)';
-                    this.disabled = false;
-                }, 2000);
-            }, 1500);
-
-            showNotification('AI 모델 설정이 저장되었습니다. 변경사항이 즉시 적용됩니다.', 'success');
-        });
-
-        // 알림 표시 함수
         function showNotification(message, type = 'info') {
             const notification = document.createElement('div');
             notification.style.cssText = `
@@ -896,23 +1316,23 @@
                 max-width: 400px;
                 box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
             `;
-            
+
             const colors = {
                 success: '#28a745',
                 error: '#dc3545',
                 warning: '#ffc107',
                 info: '#17a2b8'
             };
-            
+
             notification.style.background = colors[type] || colors.info;
             notification.textContent = message;
-            
+
             document.body.appendChild(notification);
-            
-            setTimeout(() => {
+
+            requestAnimationFrame(() => {
                 notification.style.transform = 'translateX(0)';
-            }, 100);
-            
+            });
+
             setTimeout(() => {
                 notification.style.transform = 'translateX(100%)';
                 setTimeout(() => {
@@ -922,11 +1342,6 @@
                 }, 300);
             }, 3000);
         }
-
-        // 페이지 로드 완료 시 초기화
-        document.addEventListener('DOMContentLoaded', function() {
-            showNotification('EXAONE 4.0 모델 설정이 준비되었습니다.', 'success');
-        });
     </script>
 </body>
 
