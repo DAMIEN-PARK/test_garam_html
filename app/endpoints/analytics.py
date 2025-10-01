@@ -41,7 +41,8 @@ def dashboard_metrics(
 def daily_timeseries(
     # 최근 N일 기준 일별 시계열. 기본 30일, 최대 365일.
     days: int = Query(30, ge=1, le=365),
-    db: Session = Depends(get_db)):
+    db: Session = Depends(get_db),
+):
 
     # 날짜별 건수/지표 포인트 배열 반환(프론트 라인차트용)
     return [DailyPoint(**p) for p in analytics.get_daily_timeseries(db, days=days)]
@@ -51,7 +52,8 @@ def daily_timeseries(
 def hourly_usage(
     # 최근 N일 합산 시간대별(0-23시) 사용량. 기본 7일, 최대 30일.
     days: int = Query(7, ge=1, le=30),
-    db: Session = Depends(get_db)):
+    db: Session = Depends(get_db),
+):
 
     # 시간대별 평균 또는 총합 포인트 배열 반환(히트맵/바차트용)
     return [HourlyPoint(**p) for p in analytics.get_hourly_usage(db, days=days)]
