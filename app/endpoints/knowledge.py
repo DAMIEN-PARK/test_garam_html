@@ -121,9 +121,9 @@ class PagesBulkCreateIn(BaseModel):
 def bulk_create_pages(knowledge_id: int, payload: PagesBulkCreateIn, db: Session = Depends(get_db)):
     if not crud.get_knowledge(db, knowledge_id):
         raise HTTPException(status_code=404, detail="knowledge not found")
-    # 안전을 위해 knowledge_id 강제 주입
-    items = [{**p.model_dump(), "knowledge_id": knowledge_id} for p in payload.pages]
-    return crud.bulk_create_pages(db, items)
+    # 요청 본문에 포함된 knowledge_id는 무시하고 path parameter의 값을 사용
+    items = [p.model_dump(exclude={"knowledge_id"}) for p in payload.pages]
+    return crud.bulk_create_pages(db, knowledge_id, items)
 
 
 # ---------- KnowledgeChunk ----------
