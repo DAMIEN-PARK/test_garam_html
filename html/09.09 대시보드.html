@@ -1326,24 +1326,129 @@
     </div>
 
     <script>
+        const API_BASE_URL = (window.API_BASE_URL || '').replace(/\/$/, '');
+
+        async function fetchJSON(url, options = {}) {
+            try {
+                const response = await fetch(url, options);
+                if (!response.ok) {
+                    let message = `HTTP ${response.status}`;
+                    try {
+                        const data = await response.json();
+                        if (data?.detail) {
+                            message = data.detail;
+                        } else if (typeof data === 'string') {
+                            message = data;
+                        }
+                    } catch (jsonError) {
+                        // ignore json parse error
+                    }
+                    throw new Error(message);
+                }
+
+                if (response.status === 204) {
+                    return null;
+                }
+
+                const text = await response.text();
+                if (!text) {
+                    return null;
+                }
+
+                try {
+                    return JSON.parse(text);
+                } catch (parseError) {
+                    return null;
+                }
+            } catch (error) {
+                if (error instanceof Error) {
+                    throw error;
+                }
+                throw new Error('네트워크 오류가 발생했습니다.');
+            }
+        }
+
+        class DashboardApi {
+            constructor(baseUrl) {
+                this.baseUrl = baseUrl || '';
+            }
+
+            buildUrl(path, params) {
+                const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+                const query = params ? `?${new URLSearchParams(params).toString()}` : '';
+                return `${this.baseUrl}${normalizedPath}${query}`;
+            }
+
+            getDashboardMetrics() {
+                return fetchJSON(this.buildUrl('/analytics/dashboard'));
+            }
+
+            getDailyTimeseries(days) {
+                return fetchJSON(this.buildUrl('/analytics/timeseries/daily', { days: String(days) }));
+            }
+
+            getHourlyUsage(days) {
+                return fetchJSON(this.buildUrl('/analytics/timeseries/hourly', { days: String(days) }));
+            }
+
+            getDailySummary(start, end, includeToday = true) {
+                return fetchJSON(
+                    this.buildUrl('/analytics/daily', {
+                        start,
+                        end,
+                        include_today: includeToday ? 'true' : 'false'
+                    })
+                );
+            }
+        }
+
+        function formatDateRange(days) {
+            const clamped = Math.max(1, days);
+            const end = new Date();
+            const start = new Date();
+            start.setDate(end.getDate() - (clamped - 1));
+
+            const toStr = (date) => {
+                const year = date.getFullYear();
+                const month = `${date.getMonth() + 1}`.padStart(2, '0');
+                const day = `${date.getDate()}`.padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            };
+
+            return {
+                start: toStr(start),
+                end: toStr(end)
+            };
+        }
+
+        function formatNumber(value) {
+            if (value === null || value === undefined || Number.isNaN(value)) {
+                return '-';
+            }
+            if (typeof value === 'number') {
+                return value.toLocaleString('ko-KR');
+            }
+            return value;
+        }
+
         // 사이드바 관련 기능
         class SidebarManager {
-            constructor() {
+            constructor(api) {
+                this.api = api;
                 this.sidebar = document.getElementById('sidebar');
                 this.sidebarToggle = document.getElementById('sidebarToggle');
                 this.mobileMenuBtn = document.getElementById('mobileMenuBtn');
                 this.refreshBtn = document.getElementById('refreshBtn');
                 this.markAllReadBtn = document.getElementById('markAllRead');
                 this.lastUpdateElement = document.getElementById('lastUpdate');
-                
+
                 this.init();
             }
 
             init() {
                 this.bindEvents();
-                this.updateLastUpdate();
                 this.setCurrentPage();
-                this.loadMetricsFromStorage();
+                this.loadMetrics();
             }
 
             bindEvents() {
@@ -1471,38 +1576,38 @@
                 }
             }
 
-            loadMetricsFromStorage() {
-                const chatbotMetrics = JSON.parse(localStorage.getItem('chatbotMetrics') || '{}');
-                const feedbackData = JSON.parse(localStorage.getItem('feedbackData') || '{}');
-                
-                const totalConversations = chatbotMetrics.totalConversations || 1247;
-                const totalFeedback = feedbackData.total || 0;
-                const helpful = feedbackData.helpful || 0;
-                
-                let satisfactionRate = 91.4;
-                if (totalFeedback > 0) {
-                    satisfactionRate = ((helpful / totalFeedback) * 100).toFixed(1);
+            async loadMetrics() {
+                if (!this.api) {
+                    return;
                 }
 
-                const accuracyData = chatbotMetrics.categoryAccuracy || {};
-                let totalAccuracy = 0;
-                let accuracyCount = 0;
-                
-                Object.values(accuracyData).forEach(cat => {
-                    if (cat.total > 0) {
-                        totalAccuracy += (cat.correct / cat.total) * 100;
-                        accuracyCount++;
-                    }
-                });
-                
-                let firstResponseAccuracy = 89.2;
-                if (accuracyCount > 0) {
-                    firstResponseAccuracy = (totalAccuracy / accuracyCount).toFixed(1);
+                try {
+                    const metrics = await this.api.getDashboardMetrics();
+                    this.lastMetrics = metrics;
+                    this.renderMetrics(metrics);
+                    this.updateLastUpdate();
+                } catch (error) {
+                    console.error('메트릭 로딩 오류:', error);
+                    this.showNotification(error.message || '대시보드 데이터를 불러오지 못했습니다.', 'error');
+                }
+            }
+
+            renderMetrics(metrics) {
+                if (!metrics) {
+                    this.updateMetricDisplay('totalConversations', '-');
+                    this.updateMetricDisplay('satisfactionRate', '-');
+                    this.updateMetricDisplay('avgResponseTime', '-');
+                    return;
                 }
 
-                this.updateMetricDisplay('totalConversations', totalConversations);
-                this.updateMetricDisplay('satisfactionRate', satisfactionRate + '%');
-                this.updateMetricDisplay('firstResponseAccuracy', firstResponseAccuracy + '%');
+                const totalSessions = metrics.total_sessions ?? 0;
+                const satisfactionRate = (metrics.satisfaction_rate ?? 0) * 100;
+                const avgResponseMs = metrics.avg_response_ms ?? 0;
+                const avgResponseSeconds = avgResponseMs / 1000;
+
+                this.updateMetricDisplay('totalConversations', formatNumber(totalSessions));
+                this.updateMetricDisplay('satisfactionRate', `${satisfactionRate.toFixed(1)}%`);
+                this.updateMetricDisplay('avgResponseTime', `${avgResponseSeconds.toFixed(1)}초`);
             }
 
             updateMetricDisplay(id, value) {
@@ -1515,10 +1620,9 @@
             refreshData() {
                 if (this.refreshBtn) {
                     this.refreshBtn.classList.add('spinning');
-                    
+
                     this.performDataRefresh().then(() => {
                         this.refreshBtn.classList.remove('spinning');
-                        this.updateLastUpdate();
                         this.showNotification('데이터가 새로고침되었습니다.', 'success');
                     }).catch((error) => {
                         this.refreshBtn.classList.remove('spinning');
@@ -1529,21 +1633,13 @@
             }
 
             async performDataRefresh() {
-                return new Promise((resolve) => {
-                    setTimeout(() => {
-                        this.loadMetricsFromStorage();
-                        this.updateMetrics();
-                        resolve();
-                    }, 1000);
-                });
-            }
+                const tasks = [this.loadMetrics()];
 
-            updateMetrics() {
-                this.loadMetricsFromStorage();
-                
-                if (window.chartManager) {
-                    window.chartManager.updateChartsWithStoredData();
+                if (window.chartManager?.refreshCharts) {
+                    tasks.push(window.chartManager.refreshCharts());
                 }
+
+                await Promise.all(tasks);
             }
 
             markAllNotificationsRead() {
@@ -1638,25 +1734,38 @@
                 return icons[type] || icons.info;
             }
         }
-
         // 차트 초기화 클래스
         class ChartManager {
-            constructor() {
+            constructor(api) {
+                this.api = api;
                 this.charts = {};
-                this.initCharts();
+                this.currentTrendDays = 30;
+                this.initCharts().catch(error => {
+                    console.error('차트 초기화 오류:', error);
+                });
             }
 
-            initCharts() {
+            async initCharts() {
+                await this.refreshCharts();
+            }
+
+            async refreshCharts() {
+                if (!this.api) {
+                    return;
+                }
+
                 try {
-                    this.initTrendChart();
-                    this.initFeedbackChart();
-                    this.initHourlyChart();
+                    await Promise.all([
+                        this.initTrendChart(this.currentTrendDays),
+                        this.initFeedbackChart(),
+                        this.initHourlyChart()
+                    ]);
                 } catch (error) {
-                    console.error('차트 초기화 중 오류:', error);
+                    console.error('차트 새로고침 중 오류:', error);
                 }
             }
 
-            initTrendChart() {
+            async initTrendChart(days = this.currentTrendDays || 30) {
                 const ctx = document.getElementById('trendChart');
                 if (!ctx || typeof Chart === 'undefined') {
                     console.warn('trendChart 캔버스를 찾을 수 없거나 Chart.js가 로드되지 않았습니다.');
@@ -1664,63 +1773,75 @@
                 }
 
                 try {
-                    const chatbotMetrics = JSON.parse(localStorage.getItem('chatbotMetrics') || '{}');
-                    const dailyData = chatbotMetrics.dailyData || {};
-
+                    const points = await this.api.getDailyTimeseries(days);
                     const labels = [];
                     const data = [];
-                    
-                    for (let i = 29; i >= 0; i--) {
-                        const date = new Date();
-                        date.setDate(date.getDate() - i);
-                        const dateStr = date.toDateString();
-                        
-                        labels.push(date.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' }));
-                        data.push(dailyData[dateStr] || Math.floor(Math.random() * 50) + 10);
+
+                    (points || []).forEach(point => {
+                        const ts = new Date(point.ts);
+                        if (Number.isNaN(ts.getTime())) {
+                            return;
+                        }
+                        labels.push(ts.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' }));
+                        data.push(point.sessions ?? 0);
+                    });
+
+                    if (labels.length === 0) {
+                        const range = formatDateRange(days);
+                        labels.push(`${range.start} ~ ${range.end}`);
+                        data.push(0);
                     }
 
-                    this.charts.trend = new Chart(ctx, {
-                        type: 'line',
-                        data: {
-                            labels: labels,
-                            datasets: [{
-                                label: '일일 문의 수',
-                                data: data,
-                                borderColor: '#1e60e1',
-                                backgroundColor: 'rgba(30, 96, 225, 0.1)',
-                                tension: 0.4,
-                                fill: true
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: {
-                                legend: {
-                                    display: false
-                                }
+                    if (this.charts.trend) {
+                        this.charts.trend.data.labels = labels;
+                        this.charts.trend.data.datasets[0].data = data;
+                        this.charts.trend.update();
+                    } else {
+                        this.charts.trend = new Chart(ctx, {
+                            type: 'line',
+                            data: {
+                                labels: labels,
+                                datasets: [{
+                                    label: '일일 문의 수',
+                                    data: data,
+                                    borderColor: '#1e60e1',
+                                    backgroundColor: 'rgba(30, 96, 225, 0.1)',
+                                    tension: 0.4,
+                                    fill: true
+                                }]
                             },
-                            scales: {
-                                y: {
-                                    beginAtZero: true,
-                                    grid: {
-                                        color: '#e9ecef'
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: {
+                                        display: false
                                     }
                                 },
-                                x: {
-                                    grid: {
-                                        display: false
+                                scales: {
+                                    y: {
+                                        beginAtZero: true,
+                                        grid: {
+                                            color: '#e9ecef'
+                                        }
+                                    },
+                                    x: {
+                                        grid: {
+                                            display: false
+                                        }
                                     }
                                 }
                             }
-                        }
-                    });
+                        });
+                    }
+
+                    this.currentTrendDays = days;
                 } catch (error) {
                     console.error('트렌드 차트 초기화 오류:', error);
                 }
             }
 
-            initFeedbackChart() {
+            async initFeedbackChart(days = 30) {
                 const ctx = document.getElementById('feedbackChart');
                 if (!ctx || typeof Chart === 'undefined') {
                     console.warn('feedbackChart 캔버스를 찾을 수 없거나 Chart.js가 로드되지 않았습니다.');
@@ -1728,52 +1849,69 @@
                 }
 
                 try {
-                    const feedbackData = JSON.parse(localStorage.getItem('feedbackData') || '{}');
-                    const helpful = feedbackData.helpful || 456;
-                    const notHelpful = feedbackData.notHelpful || 52;
-                    const noResponse = Math.max(0, (feedbackData.total || 508) - helpful - notHelpful);
+                    const range = formatDateRange(days);
+                    const summary = await this.api.getDailySummary(range.start, range.end, true);
 
-                    this.charts.feedback = new Chart(ctx, {
-                        type: 'doughnut',
-                        data: {
-                            labels: ['도움됨', '도움안됨', '미응답'],
-                            datasets: [{
-                                data: [helpful, notHelpful, noResponse],
-                                backgroundColor: [
-                                    '#28a745',
-                                    '#dc3545',
-                                    '#6c757d'
-                                ],
-                                borderWidth: 2,
-                                borderColor: '#fff'
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: {
-                                legend: {
-                                    position: 'bottom',
-                                    labels: {
-                                        padding: 20,
-                                        usePointStyle: true
+                    let helpful = 0;
+                    let notHelpful = 0;
+                    let inquiries = 0;
+
+                    (summary || []).forEach(item => {
+                        helpful += item.feedback_helpful ?? 0;
+                        notHelpful += item.feedback_not_helpful ?? 0;
+                        inquiries += item.inquiries_created ?? 0;
+                    });
+
+                    const totalFeedback = helpful + notHelpful;
+                    const noResponse = Math.max(0, inquiries - totalFeedback);
+                    const dataset = [helpful, notHelpful, noResponse];
+
+                    if (this.charts.feedback) {
+                        this.charts.feedback.data.datasets[0].data = dataset;
+                        this.charts.feedback.update();
+                    } else {
+                        this.charts.feedback = new Chart(ctx, {
+                            type: 'doughnut',
+                            data: {
+                                labels: ['도움됨', '도움안됨', '미응답'],
+                                datasets: [{
+                                    data: dataset,
+                                    backgroundColor: [
+                                        '#28a745',
+                                        '#dc3545',
+                                        '#6c757d'
+                                    ],
+                                    borderWidth: 2,
+                                    borderColor: '#fff'
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: {
+                                        position: 'bottom',
+                                        labels: {
+                                            padding: 20,
+                                            usePointStyle: true
+                                        }
                                     }
                                 }
                             }
-                        }
-                    });
+                        });
+                    }
                 } catch (error) {
                     console.error('피드백 차트 초기화 오류:', error);
                 }
             }
 
-            initHourlyChart() {
+            async initHourlyChart(days = 7) {
                 const canvas = document.getElementById('hourlyChart');
                 if (!canvas || typeof Chart === 'undefined') {
                     console.warn('hourlyChart 캔버스를 찾을 수 없거나 Chart.js가 로드되지 않았습니다.');
                     return;
                 }
-                
+
                 try {
                     const ctx = canvas.getContext('2d');
                     if (!ctx) {
@@ -1781,319 +1919,123 @@
                         return;
                     }
 
-                    const chatbotMetrics = JSON.parse(localStorage.getItem('chatbotMetrics') || '{}');
-                    const hourlyData = chatbotMetrics.hourlyData || {};
+                    const range = formatDateRange(days);
+                    const [hourlyPoints, summary] = await Promise.all([
+                        this.api.getHourlyUsage(days),
+                        this.api.getDailySummary(range.start, range.end, true)
+                    ]);
 
-                    const hours = [];
-                    const inquiries = [];
-                    const satisfactionRates = [];
+                    const labels = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, '0')}:00`);
+                    const totals = new Array(24).fill(0);
 
-                    for (let i = 0; i < 24; i++) {
-                        hours.push(`${i}:00`);
-                        inquiries.push(hourlyData[i] || Math.floor(Math.random() * 30) + 5);
-                        satisfactionRates.push(Math.floor(Math.random() * 20) + 80);
-                    }
+                    (hourlyPoints || []).forEach(point => {
+                        const ts = new Date(point.ts);
+                        if (Number.isNaN(ts.getTime())) {
+                            return;
+                        }
+                        const hour = ts.getHours();
+                        totals[hour] += point.messages ?? 0;
+                    });
 
-                    this.charts.hourly = new Chart(ctx, {
-                        type: 'bar',
-                        data: {
-                            labels: hours,
-                            datasets: [{
-                                label: '문의량',
-                                data: inquiries,
-                                backgroundColor: 'rgba(30, 96, 225, 0.8)',
-                                yAxisID: 'y'
-                            }, {
-                                label: '만족도 (%)',
-                                data: satisfactionRates,
-                                type: 'line',
-                                borderColor: '#28a745',
-                                backgroundColor: 'rgba(40, 167, 69, 0.1)',
-                                yAxisID: 'y1',
-                                tension: 0.4
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            interaction: {
-                                mode: 'index',
-                                intersect: false,
+                    const divisor = Math.max(days, 1);
+                    const inquiries = totals.map(sum => Math.round(sum / divisor));
+
+                    let helpful = 0;
+                    let notHelpful = 0;
+                    (summary || []).forEach(item => {
+                        helpful += item.feedback_helpful ?? 0;
+                        notHelpful += item.feedback_not_helpful ?? 0;
+                    });
+
+                    const satisfaction = helpful + notHelpful > 0
+                        ? (helpful / (helpful + notHelpful)) * 100
+                        : 0;
+                    const satisfactionData = Array(24).fill(Number(satisfaction.toFixed(1)));
+
+                    if (this.charts.hourly) {
+                        this.charts.hourly.data.labels = labels;
+                        this.charts.hourly.data.datasets[0].data = inquiries;
+                        this.charts.hourly.data.datasets[1].data = satisfactionData;
+                        this.charts.hourly.update();
+                    } else {
+                        this.charts.hourly = new Chart(ctx, {
+                            type: 'bar',
+                            data: {
+                                labels: labels,
+                                datasets: [{
+                                    label: '문의량',
+                                    data: inquiries,
+                                    backgroundColor: 'rgba(30, 96, 225, 0.8)',
+                                    yAxisID: 'y'
+                                }, {
+                                    label: '만족도 (%)',
+                                    data: satisfactionData,
+                                    type: 'line',
+                                    borderColor: '#28a745',
+                                    backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                                    yAxisID: 'y1',
+                                    tension: 0.4
+                                }]
                             },
-                            scales: {
-                                x: {
-                                    grid: {
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                interaction: {
+                                    mode: 'index',
+                                    intersect: false,
+                                },
+                                scales: {
+                                    x: {
+                                        grid: {
+                                            display: false
+                                        }
+                                    },
+                                    y: {
+                                        type: 'linear',
+                                        display: true,
+                                        position: 'left',
+                                        grid: {
+                                            color: '#e9ecef'
+                                        },
+                                        title: {
+                                            display: true,
+                                            text: '문의 수'
+                                        }
+                                    },
+                                    y1: {
+                                        type: 'linear',
+                                        display: true,
+                                        position: 'right',
+                                        grid: {
+                                            drawOnChartArea: false,
+                                        },
+                                        title: {
+                                            display: true,
+                                            text: '만족도 (%)'
+                                        }
+                                    }
+                                },
+                                plugins: {
+                                    legend: {
                                         display: false
                                     }
-                                },
-                                y: {
-                                    type: 'linear',
-                                    display: true,
-                                    position: 'left',
-                                    grid: {
-                                        color: '#e9ecef'
-                                    },
-                                    title: {
-                                        display: true,
-                                        text: '문의 수'
-                                    }
-                                },
-                                y1: {
-                                    type: 'linear',
-                                    display: true,
-                                    position: 'right',
-                                    grid: {
-                                        drawOnChartArea: false,
-                                    },
-                                    title: {
-                                        display: true,
-                                        text: '만족도 (%)'
-                                    }
-                                }
-                            },
-                            plugins: {
-                                legend: {
-                                    display: false
                                 }
                             }
-                        }
-                    });
+                        });
+                    }
                 } catch (error) {
                     console.error('시간별 차트 초기화 오류:', error);
                 }
             }
 
-            updateTrendPeriod(days) {
-                if (!this.charts.trend) {
-                    console.warn('트렌드 차트가 초기화되지 않았습니다.');
-                    return;
-                }
-
-                try {
-                    const chatbotMetrics = JSON.parse(localStorage.getItem('chatbotMetrics') || '{}');
-                    const dailyData = chatbotMetrics.dailyData || {};
-
-                    const labels = [];
-                    const data = [];
-                    for (let i = days - 1; i >= 0; i--) {
-                        const date = new Date();
-                        date.setDate(date.getDate() - i);
-                        const dateStr = date.toDateString();
-                        
-                        labels.push(date.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' }));
-                        data.push(dailyData[dateStr] || Math.floor(Math.random() * 50) + 10);
-                    }
-
-                    this.charts.trend.data.labels = labels;
-                    this.charts.trend.data.datasets[0].data = data;
-                    this.charts.trend.update();
-                } catch (error) {
-                    console.error('트렌드 차트 업데이트 오류:', error);
-                }
-            }
-
-            updateChartsWithStoredData() {
-                try {
-                    this.initTrendChart();
-                    this.initFeedbackChart();
-                    this.initHourlyChart();
-                } catch (error) {
-                    console.error('차트 업데이트 중 오류:', error);
-                }
+            async updateTrendPeriod(days) {
+                this.currentTrendDays = days;
+                await this.initTrendChart(days);
             }
         }
 
-        // 메트릭 시뮬레이션 클래스 - 현실적인 시뮬레이션
-        class MetricsSimulator {
-            constructor() {
-                this.initializeData();
-                this.startSimulation();
-            }
 
-            initializeData() {
-                if (!localStorage.getItem('chatbotMetrics')) {
-                    const initialMetrics = {
-                        totalConversations: 1247,
-                        categories: {
-                            'pos-error': 450,
-                            'kiosk-issue': 320,
-                            'payment-terminal': 280,
-                            'installation': 197
-                        },
-                        dailyData: {},
-                        hourlyData: {},
-                        // 각 카테고리별 첫 응답 정확도 (correct/total)
-                        categoryAccuracy: {
-                            'pos-error': { correct: 382, total: 450 },      // 85%
-                            'kiosk-issue': { correct: 294, total: 320 },    // 92%
-                            'payment-terminal': { correct: 246, total: 280 }, // 88%
-                            'installation': { correct: 179, total: 197 }     // 91%
-                        },
-                        // 평균 응답시간 (초)
-                        avgResponseTime: 1.8
-                    };
-
-                    // 30일간 일일 데이터 생성 (현실적인 패턴)
-                    for (let i = 0; i < 30; i++) {
-                        const date = new Date();
-                        date.setDate(date.getDate() - i);
-                        const dateStr = date.toDateString();
-                        // 주말에는 문의가 적고, 평일에는 많은 패턴
-                        const dayOfWeek = date.getDay();
-                        const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-                        const baseAmount = isWeekend ? 25 : 45;
-                        initialMetrics.dailyData[dateStr] = baseAmount + Math.floor(Math.random() * 20);
-                    }
-
-                    // 24시간 데이터 생성 (업무시간에 집중)
-                    for (let i = 0; i < 24; i++) {
-                        let baseAmount;
-                        if (i >= 9 && i <= 18) { // 업무시간
-                            baseAmount = 20 + Math.floor(Math.random() * 25);
-                        } else if (i >= 19 && i <= 22) { // 저녁시간
-                            baseAmount = 10 + Math.floor(Math.random() * 15);
-                        } else { // 새벽/심야
-                            baseAmount = Math.floor(Math.random() * 8);
-                        }
-                        initialMetrics.hourlyData[i] = baseAmount;
-                    }
-
-                    localStorage.setItem('chatbotMetrics', JSON.stringify(initialMetrics));
-                }
-
-                if (!localStorage.getItem('feedbackData')) {
-                    // 현실적인 피드백 비율: 90% 긍정, 10% 부정
-                    const initialFeedback = {
-                        helpful: 456,    // 90%
-                        notHelpful: 52,  // 10%
-                        total: 508       // 전체 문의의 약 40%가 피드백 제공
-                    };
-                    localStorage.setItem('feedbackData', JSON.stringify(initialFeedback));
-                }
-            }
-
-            startSimulation() {
-                // 10초마다 새로운 대화 (실제 환경에서는 더 드물게)
-                setInterval(() => {
-                    this.addRandomConversation();
-                }, 10000);
-
-                // 30초마다 피드백 추가 (대화보다 덜 빈번)
-                setInterval(() => {
-                    this.addRandomFeedback();
-                }, 30000);
-
-                // 1분마다 응답시간 업데이트
-                setInterval(() => {
-                    this.updateResponseTime();
-                }, 60000);
-            }
-
-            addRandomConversation() {
-                const metrics = JSON.parse(localStorage.getItem('chatbotMetrics') || '{}');
-                const today = new Date().toDateString();
-                const currentHour = new Date().getHours();
-
-                // 이 대화 수 증가
-                metrics.totalConversations = (metrics.totalConversations || 0) + 1;
-
-                // 일일 데이터 업데이트
-                metrics.dailyData = metrics.dailyData || {};
-                metrics.dailyData[today] = (metrics.dailyData[today] || 0) + 1;
-
-                // 시간대별 데이터 업데이트
-                metrics.hourlyData = metrics.hourlyData || {};
-                metrics.hourlyData[currentHour] = (metrics.hourlyData[currentHour] || 0) + 1;
-
-                // 랜덤 카테고리 선택 (현실적인 분포)
-                const categories = ['pos-error', 'kiosk-issue', 'payment-terminal', 'installation'];
-                const weights = [0.36, 0.26, 0.23, 0.15]; // POS 오류가 가장 많음
-                const randomCategory = this.weightedRandomChoice(categories, weights);
-                
-                metrics.categories = metrics.categories || {};
-                metrics.categories[randomCategory] = (metrics.categories[randomCategory] || 0) + 1;
-
-                // 첫 응답 정확도 시뮬레이션
-                metrics.categoryAccuracy = metrics.categoryAccuracy || {};
-                if (!metrics.categoryAccuracy[randomCategory]) {
-                    metrics.categoryAccuracy[randomCategory] = { correct: 0, total: 0 };
-                }
-                
-                metrics.categoryAccuracy[randomCategory].total += 1;
-                
-                // 카테고리별 정확도 확률 (POS가 가장 어려움)
-                const accuracyRates = {
-                    'pos-error': 0.85,
-                    'kiosk-issue': 0.92,
-                    'payment-terminal': 0.88,
-                    'installation': 0.91
-                };
-                
-                if (Math.random() < accuracyRates[randomCategory]) {
-                    metrics.categoryAccuracy[randomCategory].correct += 1;
-                }
-
-                localStorage.setItem('chatbotMetrics', JSON.stringify(metrics));
-
-                if (window.sidebarManager) {
-                    window.sidebarManager.loadMetricsFromStorage();
-                }
-            }
-
-            addRandomFeedback() {
-                const feedback = JSON.parse(localStorage.getItem('feedbackData') || '{}');
-
-                // 90% 확률로 긍정 피드백 (현실적)
-                const isPositive = Math.random() > 0.1;
-                
-                if (isPositive) {
-                    feedback.helpful = (feedback.helpful || 0) + 1;
-                } else {
-                    feedback.notHelpful = (feedback.notHelpful || 0) + 1;
-                }
-                
-                feedback.total = (feedback.total || 0) + 1;
-
-                localStorage.setItem('feedbackData', JSON.stringify(feedback));
-
-                if (window.sidebarManager) {
-                    window.sidebarManager.loadMetricsFromStorage();
-                }
-            }
-
-            updateResponseTime() {
-                const metrics = JSON.parse(localStorage.getItem('chatbotMetrics') || '{}');
-                
-                // 응답시간은 1.5~2.5초 사이에서 변동
-                const currentTime = metrics.avgResponseTime || 1.8;
-                const variation = (Math.random() - 0.5) * 0.2; // ±0.1초 변동
-                const newTime = Math.max(1.2, Math.min(2.8, currentTime + variation));
-                
-                metrics.avgResponseTime = Math.round(newTime * 10) / 10; // 소수점 1자리
-                
-                localStorage.setItem('chatbotMetrics', JSON.stringify(metrics));
-
-                if (window.sidebarManager) {
-                    window.sidebarManager.loadMetricsFromStorage();
-                }
-            }
-
-            // 가중치 기반 랜덤 선택
-            weightedRandomChoice(items, weights) {
-                const totalWeight = weights.reduce((a, b) => a + b, 0);
-                let randomNum = Math.random() * totalWeight;
-                
-                for (let i = 0; i < items.length; i++) {
-                    if (randomNum < weights[i]) {
-                        return items[i];
-                    }
-                    randomNum -= weights[i];
-                }
-                return items[items.length - 1];
-            }
-        }
-
-        // DOM 로드 완료 시 초기화
+// DOM 로드 완료 시 초기화
         document.addEventListener('DOMContentLoaded', () => {
             // 로딩 오버레이 숨기기
             const loadingOverlay = document.getElementById('loadingOverlay');
@@ -2105,17 +2047,22 @@
                     }, 300);
                 }, 500);
             }
-            
+
             // 관리자 시스템 초기화
-            window.sidebarManager = new SidebarManager();
-            window.chartManager = new ChartManager();
-            window.metricsSimulator = new MetricsSimulator();
+            const api = new DashboardApi(API_BASE_URL);
+            window.sidebarManager = new SidebarManager(api);
+            window.chartManager = new ChartManager(api);
 
             // 차트 기간 변경 이벤트
             const trendPeriodSelect = document.getElementById('trendPeriod');
             if (trendPeriodSelect) {
-                trendPeriodSelect.addEventListener('change', (e) => {
-                    window.chartManager.updateTrendPeriod(parseInt(e.target.value));
+                trendPeriodSelect.addEventListener('change', async (e) => {
+                    const days = parseInt(e.target.value, 10) || 30;
+                    try {
+                        await window.chartManager.updateTrendPeriod(days);
+                    } catch (error) {
+                        console.error('차트 기간 업데이트 오류:', error);
+                    }
                 });
             }
         });
