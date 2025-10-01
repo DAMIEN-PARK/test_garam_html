@@ -108,7 +108,8 @@ def upsert_page(
     return obj
 
 
-def bulk_create_pages(db, knowledge_id: int, pages: list[dict]) -> int:
+def bulk_create_pages(db: Session, knowledge_id: int, pages: list[dict]) -> int:
+    """지식 페이지 일괄 생성 시 path의 knowledge_id를 강제 주입"""
     objs = [
         KnowledgePage(
             knowledge_id=knowledge_id,
