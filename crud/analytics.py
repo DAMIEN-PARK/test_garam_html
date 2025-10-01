@@ -156,6 +156,9 @@ def get_model_stats(db: Session, *, limit: int = 10, start: Optional[datetime] =
             Model.provider_name,
             sessions_col,
             func.coalesce(resp_agg.c.avg_ms, 0.0).label("avg_response_ms"),
+            Model.accuracy,
+            Model.uptime_percent,
+            Model.month_conversations,
         )
         .select_from(Model)
         .outerjoin(
@@ -164,7 +167,13 @@ def get_model_stats(db: Session, *, limit: int = 10, start: Optional[datetime] =
         )
         .outerjoin(resp_agg, resp_agg.c.mid == Model.id)
         .group_by(
-            Model.id, Model.name, Model.provider_name, resp_agg.c.avg_ms
+            Model.id,
+            Model.name,
+            Model.provider_name,
+            resp_agg.c.avg_ms,
+            Model.accuracy,
+            Model.uptime_percent,
+            Model.month_conversations,
         )
         .order_by(sessions_col.desc(), Model.id.asc())
         .limit(limit)
@@ -178,6 +187,9 @@ def get_model_stats(db: Session, *, limit: int = 10, start: Optional[datetime] =
             "provider": r.provider_name,
             "sessions": int(r.sessions or 0),
             "avg_response_ms": round(float(r.avg_response_ms or 0.0), 2),
+            "accuracy": round(float(r.accuracy or 0.0), 2),
+            "uptime_percent": round(float(r.uptime_percent or 0.0), 2),
+            "monthly_conversations": int(r.month_conversations or 0),
         }
         for r in rows
     ]

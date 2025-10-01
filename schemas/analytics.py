@@ -32,3 +32,6 @@ class ModelStat(BaseModel):
     provider: str
     sessions: int
     avg_response_ms: float
+    accuracy: float
+    uptime_percent: float
+    monthly_conversations: int

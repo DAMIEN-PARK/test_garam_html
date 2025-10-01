@@ -1224,10 +1224,48 @@
                         throw new Error('활성화된 모델 정보를 찾을 수 없습니다.');
                     }
                     applyModelData(model, true);
+                    await fetchActiveModelAnalytics();
                     showNotification(`${state.modelName} 모델 설정이 준비되었습니다.`, 'success');
                 } catch (error) {
                     console.error('활성 모델 정보를 불러오는 중 오류가 발생했습니다.', error);
                     showNotification(error?.message || '활성 모델 정보를 불러오지 못했습니다.', 'error');
+                }
+            };
+
+            const fetchActiveModelAnalytics = async () => {
+                if (!state.activeModelId) {
+                    return;
+                }
+
+                try {
+                    const analytics = await fetchJSON(buildApiUrl('/analytics/models'));
+                    if (!Array.isArray(analytics) || analytics.length === 0) {
+                        return;
+                    }
+
+                    const activeMetrics = analytics.find(item => Number(item?.model_id) === Number(state.activeModelId));
+                    if (!activeMetrics) {
+                        return;
+                    }
+
+                    const updateMetricValue = (element, value, formatter) => {
+                        if (!element) {
+                            return;
+                        }
+                        if (value === undefined || value === null) {
+                            element.textContent = '데이터 없음';
+                            return;
+                        }
+                        element.textContent = formatter ? formatter(value) : String(value);
+                    };
+
+                    updateMetricValue(elements.responseTimeValue, activeMetrics.avg_response_ms, formatResponseTime);
+                    updateMetricValue(elements.monthlyConversationValue, activeMetrics.monthly_conversations, formatNumber);
+                    updateMetricValue(elements.accuracyValue, activeMetrics.accuracy, formatPercentage);
+                    updateMetricValue(elements.uptimeValue, activeMetrics.uptime_percent, formatPercentage);
+                } catch (error) {
+                    console.error('모델 운영 지표를 불러오는 중 오류가 발생했습니다.', error);
+                    showNotification('모델 운영 지표를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.', 'warning');
                 }
             };
 
@@ -1278,6 +1316,7 @@
 
                         if (updated) {
                             applyModelData(updated, true);
+                            await fetchActiveModelAnalytics();
                         } else {
                             state.initialSettings = gatherCurrentSettings();
                         }
