@@ -705,17 +705,17 @@
                 <!-- 상단 성능 지표 카드들 -->
                 <div class="metrics-row">
                     <div class="metric-card">
-                        <div class="metric-value success">94.2%</div>
+                        <div class="metric-value success" id="metricResolutionRate">94.2%</div>
                         <div class="metric-label">문제 해결률</div>
                     </div>
 
                     <div class="metric-card">
-                        <div class="metric-value info">2.3분</div>
+                        <div class="metric-value info" id="metricAvgResponse">2.3분</div>
                         <div class="metric-label">평균 응답 시간</div>
                     </div>
 
                     <div class="metric-card">
-                        <div class="metric-value purple">3.2턴</div>
+                        <div class="metric-value purple" id="metricAvgTurns">3.2턴</div>
                         <div class="metric-label">평균 대화 턴수</div>
                     </div>
 
@@ -731,7 +731,12 @@
                         <div class="chart-header">
                             <h3 class="chart-title">일별 대화 트렌드</h3>
                             <div class="chart-controls">
-                               
+                                <select id="trendPeriod" class="chart-period">
+                                    <option value="7" selected>최근 7일</option>
+                                    <option value="30">최근 30일</option>
+                                    <option value="90">최근 90일</option>
+                                </select>
+
                                 <button class="chart-action" title="차트 다운로드">
                                     <i class="fas fa-download"></i>
                                 </button>
@@ -892,56 +897,191 @@
                         </div>
                     </div>
                 </div>
+
+                <div class="chart-card full-width" style="margin-bottom: 2rem;">
+                    <div class="chart-header">
+                        <h3 class="chart-title">실시간 활동 피드</h3>
+                    </div>
+                    <div class="chart-container" style="padding: 1.5rem;">
+                        <div id="activityFeed" class="activity-feed">
+                            <div class="activity-item">
+                                <div class="activity-icon chat">💬</div>
+                                <div class="activity-content">
+                                    <div class="activity-text">최신 상담 데이터를 불러오는 중입니다...</div>
+                                    <div class="activity-time">잠시만 기다려주세요</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </main>
     </div>
 
     <script>
-        function createConversationChart() {
-            const ctx = document.getElementById('conversationChart').getContext('2d');
-            new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: ['월', '화', '수', '목', '금', '토', '일'],
-                    datasets: [{
-                        label: '대화 수',
-                        data: [120, 145, 130, 160, 185, 120, 90],
-                        borderColor: '#1e60e1',
-                        backgroundColor: 'rgba(30, 96, 225, 0.1)',
-                        fill: true,
-                        tension: 0.4
-                    }, {
-                        label: '해결된 문의',
-                        data: [110, 135, 125, 155, 175, 115, 85],
-                        borderColor: '#28a745',
-                        backgroundColor: 'rgba(40, 167, 69, 0.1)',
-                        fill: false,
-                        tension: 0.4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'top'
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            grid: {
-                                color: 'rgba(0, 0, 0, 0.1)'
-                            }
-                        },
-                        x: {
-                            grid: {
-                                display: false
-                            }
-                        }
-                    }
-                }
+        const API_BASE = (window.API_BASE || '').replace(/\/$/, '');
+        let conversationChart;
+        let hourlyChart;
+        function getApiUrl(path) {
+            if (!API_BASE) return path;
+            return `${API_BASE}${path}`;
+        }
+
+        async function fetchJson(path, options) {
+            const response = await fetch(getApiUrl(path), {
+                headers: { 'Accept': 'application/json' },
+                ...(options || {}),
             });
+
+            if (!response.ok) {
+                throw new Error(`API 요청 실패: ${response.status}`);
+            }
+
+            return response.json();
+        }
+
+        function formatKoreanDate(date) {
+            return `${date.getMonth() + 1}월 ${date.getDate()}일`;
+        }
+
+        function formatResponseLatency(ms) {
+            if (!ms) return '0초';
+            const seconds = ms / 1000;
+            if (seconds >= 60) {
+                return `${(seconds / 60).toFixed(1)}분`;
+            }
+            return `${seconds.toFixed(1)}초`;
+        }
+
+        function formatRelativeTime(isoString) {
+            if (!isoString) return '시간 정보 없음';
+            const date = new Date(isoString);
+            if (Number.isNaN(date.getTime())) return '시간 정보 없음';
+
+            const diffMs = Date.now() - date.getTime();
+            const diffMinutes = Math.floor(diffMs / 60000);
+
+            if (diffMinutes < 1) return '방금 전';
+            if (diffMinutes < 60) return `${diffMinutes}분 전`;
+
+            const diffHours = Math.floor(diffMinutes / 60);
+            if (diffHours < 24) return `${diffHours}시간 전`;
+
+            const diffDays = Math.floor(diffHours / 24);
+            return `${diffDays}일 전`;
+        }
+
+        function truncateText(text, length = 60) {
+            if (!text) return '';
+            return text.length > length ? `${text.slice(0, length)}…` : text;
+        }
+
+        function updateDailyAverageFromData(data) {
+            const dailyAverageElement = document.getElementById('dailyAverage');
+            if (!dailyAverageElement) return;
+            if (!data.length) {
+                dailyAverageElement.textContent = '0.0건/일';
+                return;
+            }
+
+            const total = data.reduce((sum, item) => sum + (item.sessions || 0), 0);
+            const average = total / data.length;
+            dailyAverageElement.textContent = `${average.toFixed(1)}건/일`;
+        }
+
+        async function createConversationChart(days = 7) {
+            const ctx = document.getElementById('conversationChart').getContext('2d');
+
+            try {
+                const dailySeries = await fetchJson(`/analytics/timeseries/daily?days=${days}`);
+                const labels = dailySeries.map(point => formatKoreanDate(new Date(point.ts)));
+                const sessionData = dailySeries.map(point => point.sessions || 0);
+                const responseSeconds = dailySeries.map(point => (point.avg_response_ms || 0) / 1000);
+
+                if (!conversationChart) {
+                    conversationChart = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels,
+                            datasets: [{
+                                label: '세션 수',
+                                data: sessionData,
+                                borderColor: '#1e60e1',
+                                backgroundColor: 'rgba(30, 96, 225, 0.1)',
+                                fill: true,
+                                tension: 0.4,
+                                yAxisID: 'y',
+                            }, {
+                                label: '평균 응답 시간(초)',
+                                data: responseSeconds,
+                                borderColor: '#28a745',
+                                backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                                fill: false,
+                                tension: 0.4,
+                                yAxisID: 'y1',
+                            }],
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            interaction: {
+                                mode: 'index',
+                                intersect: false,
+                            },
+                            plugins: {
+                                legend: {
+                                    position: 'top',
+                                },
+                                tooltip: {
+                                    callbacks: {
+                                        label(context) {
+                                            if (context.dataset.label.includes('응답')) {
+                                                return `${context.dataset.label}: ${context.parsed.y.toFixed(1)}초`;
+                                            }
+                                            return `${context.dataset.label}: ${context.parsed.y}건`;
+                                        },
+                                    },
+                                },
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    position: 'left',
+                                    title: {
+                                        display: true,
+                                        text: '세션 수',
+                                    },
+                                },
+                                y1: {
+                                    beginAtZero: true,
+                                    position: 'right',
+                                    title: {
+                                        display: true,
+                                        text: '평균 응답 시간(초)',
+                                    },
+                                    grid: {
+                                        drawOnChartArea: false,
+                                    },
+                                },
+                                x: {
+                                    grid: {
+                                        display: false,
+                                    },
+                                },
+                            },
+                        },
+                    });
+                } else {
+                    conversationChart.data.labels = labels;
+                    conversationChart.data.datasets[0].data = sessionData;
+                    conversationChart.data.datasets[1].data = responseSeconds;
+                    conversationChart.update();
+                }
+
+                updateDailyAverageFromData(dailySeries);
+            } catch (error) {
+                console.error('일별 대화 트렌드 데이터를 불러오지 못했습니다.', error);
+            }
         }
 
         function createFeedbackChart() {
@@ -1055,93 +1195,137 @@
             });
         }
 
-        function createHourlyChart() {
+        async function createHourlyChart(days = 7) {
             const ctx = document.getElementById('hourlyChart').getContext('2d');
-            new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: ['0시', '1시', '2시', '3시', '4시', '5시', '6시', '7시', '8시', '9시', '10시', '11시', '12시', '13시', '14시', '15시', '16시', '17시', '18시', '19시', '20시', '21시', '22시', '23시'],
-                    datasets: [{
-                        label: '대화량',
-                        data: [5, 3, 2, 1, 2, 8, 12, 18, 25, 35, 45, 38, 42, 52, 48, 45, 42, 35, 28, 22, 18, 15, 12, 8],
-                        backgroundColor: 'rgba(30, 96, 225, 0.8)',
-                        borderRadius: 4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            display: false
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            title: {
-                                display: true,
-                                text: '대화 수'
+            const labels = ['0시', '1시', '2시', '3시', '4시', '5시', '6시', '7시', '8시', '9시', '10시', '11시', '12시', '13시', '14시', '15시', '16시', '17시', '18시', '19시', '20시', '21시', '22시', '23시'];
+
+            try {
+                const usage = await fetchJson(`/analytics/timeseries/hourly?days=${days}`);
+                const hourlyTotals = new Array(24).fill(0);
+
+                usage.forEach(point => {
+                    const date = new Date(point.ts);
+                    const hour = date.getHours();
+                    hourlyTotals[hour] += point.messages || 0;
+                });
+
+                if (!hourlyChart) {
+                    hourlyChart = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels,
+                            datasets: [{
+                                label: '대화량',
+                                data: hourlyTotals,
+                                backgroundColor: 'rgba(30, 96, 225, 0.8)',
+                                borderRadius: 4
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    display: false
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    title: {
+                                        display: true,
+                                        text: '대화 수'
+                                    }
+                                }
                             }
                         }
-                    }
+                    });
+                } else {
+                    hourlyChart.data.datasets[0].data = hourlyTotals;
+                    hourlyChart.update();
                 }
-            });
-        }
-
-        function updateDailyAverage(days) {
-            const dailyAverageElement = document.getElementById('dailyAverage');
-            if (!dailyAverageElement) return;
-            
-            // 기간별 샘플 데이터
-            const sampleData = {
-                7: { average: 45.0 },   // 7일간 일평균 45.0건
-                30: { average: 41.6 },  // 30일간 일평균 41.6건  
-                90: { average: 38.0 }   // 90일간 일평균 38.0건
-            };
-            
-            const data = sampleData[days] || sampleData[7];
-            dailyAverageElement.textContent = `${data.average}건/일`;
-        }
-
-        function updateTrendPeriod(days) {
-            console.log(`차트를 ${days}일 기간으로 업데이트합니다.`);
-            // 일평균 문의량도 함께 업데이트
-            updateDailyAverage(days);
-        }
-
-        function addActivity(icon, type, text, time) {
-            const feed = document.getElementById('activityFeed');
-            if (!feed) return;
-            
-            const activity = document.createElement('div');
-            activity.className = 'activity-item';
-            activity.innerHTML = `
-                <div class="activity-icon ${type}">${icon}</div>
-                <div class="activity-content">
-                    <div class="activity-text">${text}</div>
-                    <div class="activity-time">${time}</div>
-                </div>
-            `;
-            feed.insertBefore(activity, feed.firstChild);
-            
-            if (feed.children.length > 10) {
-                feed.removeChild(feed.lastChild);
+            } catch (error) {
+                console.error('시간대별 대화량 데이터를 불러오지 못했습니다.', error);
             }
         }
 
-        function refreshData() {
-            const activities = [
-                { icon: '💬', type: 'chat', text: 'POS 시스템 재부팅 문의' },
-                { icon: '✅', type: 'success', text: '키오스크 화면 문제 해결 완료' },
-                { icon: '⚠️', type: 'error', text: 'AI가 이해하지 못한 질문 발생' },
-                { icon: '🔧', type: 'chat', text: '카드 리더기 오류 문의' },
-                { icon: '📞', type: 'chat', text: '영업시간 문의' },
-                { icon: '✅', type: 'success', text: '환불 절차 안내 완료' }
-            ];
-            
-            const randomActivity = activities[Math.floor(Math.random() * activities.length)];
-            addActivity(randomActivity.icon, randomActivity.type, randomActivity.text, '방금 전');
+        function getActivityStatusIcon(status) {
+            switch (status) {
+                case 'completed':
+                    return { icon: '✅', type: 'success', label: '처리 완료' };
+                case 'processing':
+                    return { icon: '🔄', type: 'chat', label: '처리 중' };
+                case 'on_hold':
+                    return { icon: '⏸️', type: 'error', label: '보류' };
+                default:
+                    return { icon: '💬', type: 'chat', label: '신규 문의' };
+            }
+        }
+
+        async function refreshData() {
+            const feed = document.getElementById('activityFeed');
+            if (!feed) return;
+
+            try {
+                const inquiries = await fetchJson('/inquiries?limit=10');
+                feed.innerHTML = '';
+
+                if (!inquiries.length) {
+                    feed.innerHTML = '<div class="activity-item"><div class="activity-content"><div class="activity-text">최근 활동이 없습니다.</div><div class="activity-time">데이터가 생성되면 자동으로 업데이트됩니다.</div></div></div>';
+                    return;
+                }
+
+                inquiries
+                    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+                    .slice(0, 8)
+                    .forEach(item => {
+                        const { icon, type, label } = getActivityStatusIcon(item.status);
+                        const activity = document.createElement('div');
+                        activity.className = 'activity-item';
+                        activity.innerHTML = `
+                            <div class="activity-icon ${type}">${icon}</div>
+                            <div class="activity-content">
+                                <div class="activity-text">${truncateText(item.content)}</div>
+                                <div class="activity-time">${label} · ${formatRelativeTime(item.created_at)}</div>
+                            </div>
+                        `;
+                        feed.appendChild(activity);
+                    });
+            } catch (error) {
+                console.error('실시간 활동 피드를 불러오지 못했습니다.', error);
+                if (!feed.children.length) {
+                    feed.innerHTML = '<div class="activity-item"><div class="activity-content"><div class="activity-text">실시간 활동을 불러오지 못했습니다.</div><div class="activity-time">잠시 후 다시 시도해주세요.</div></div></div>';
+                }
+            }
+        }
+
+        async function loadDashboardMetrics() {
+            try {
+                const metrics = await fetchJson('/analytics/dashboard');
+
+                const resolutionRateEl = document.getElementById('metricResolutionRate');
+                if (resolutionRateEl && metrics.inquiry) {
+                    resolutionRateEl.textContent = `${(metrics.inquiry.resolution_rate * 100).toFixed(1)}%`;
+                }
+
+                const avgResponseEl = document.getElementById('metricAvgResponse');
+                if (avgResponseEl) {
+                    avgResponseEl.textContent = formatResponseLatency(metrics.avg_response_ms);
+                }
+
+                const avgTurnsEl = document.getElementById('metricAvgTurns');
+                if (avgTurnsEl) {
+                    avgTurnsEl.textContent = `${metrics.avg_turns?.toFixed(1) || '0.0'}턴`;
+                }
+            } catch (error) {
+                console.error('대시보드 지표를 불러오지 못했습니다.', error);
+                const resolutionRateEl = document.getElementById('metricResolutionRate');
+                if (resolutionRateEl) resolutionRateEl.textContent = '데이터 없음';
+                const avgResponseEl = document.getElementById('metricAvgResponse');
+                if (avgResponseEl) avgResponseEl.textContent = '데이터 없음';
+                const avgTurnsEl = document.getElementById('metricAvgTurns');
+                if (avgTurnsEl) avgTurnsEl.textContent = '데이터 없음';
+            }
         }
 
         function exportData() {
@@ -1152,7 +1336,7 @@
         function updateDateRange() {
             const dateRange = document.getElementById('dateRange').value;
             let days;
-            
+
             switch(dateRange) {
                 case 'today':
                     days = 1;
@@ -1169,23 +1353,28 @@
                 default:
                     days = 7;
             }
-            
-            updateDailyAverage(days);
-            
+
             // 차트 기간도 동기화 (요소가 존재할 때만)
             const trendPeriodSelect = document.getElementById('trendPeriod');
             if (trendPeriodSelect && (days === 7 || days === 30 || days === 90)) {
                 trendPeriodSelect.value = days;
             }
+
+            updateTrendPeriod(days);
+        }
+
+        function updateTrendPeriod(days) {
+            createConversationChart(days);
+            createHourlyChart(days);
         }
 
         document.addEventListener('DOMContentLoaded', function() {
-            createConversationChart();
+            loadDashboardMetrics();
+            updateTrendPeriod(7);
             createFeedbackChart();
             createResponseTimeChart();
             createSatisfactionChart();
-            createHourlyChart();
-            
+
             // 차트 기간 변경 이벤트
             const trendPeriodSelect = document.getElementById('trendPeriod');
             if (trendPeriodSelect) {
@@ -1193,19 +1382,15 @@
                     updateTrendPeriod(parseInt(e.target.value));
                 });
             }
-            
+
             // 날짜 범위 변경 이벤트
             const dateRangeSelect = document.getElementById('dateRange');
             if (dateRangeSelect) {
                 dateRangeSelect.addEventListener('change', updateDateRange);
             }
-            
-            // 5초마다 랜덤 활동 추가
-            setInterval(() => {
-                if (Math.random() > 0.7) {
-                    refreshData();
-                }
-            }, 5000);
+
+            refreshData();
+            setInterval(refreshData, 30000);
         });
     </script>
 </body>
