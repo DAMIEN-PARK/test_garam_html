@@ -782,7 +782,20 @@
         const API_STORAGE_KEY = 'garam_api_base_url';
         const SESSION_STORAGE_KEY = 'garampos_chat_selected_session';
         const SEARCH_DEBOUNCE = 200;
-        const DEFAULT_API_BASE_URL = 'http://localhost:5000';
+
+        function getDefaultApiBaseUrl() {
+            try {
+                const { origin, protocol } = window.location;
+                if (origin && /^https?:/i.test(protocol)) {
+                    return origin.replace(/\/$/, '');
+                }
+            } catch (error) {
+                console.warn('기본 API 주소 감지 실패:', error);
+            }
+            return 'http://localhost:5000';
+        }
+
+        const DEFAULT_API_BASE_URL = getDefaultApiBaseUrl();
 
         let API_BASE_URL = localStorage.getItem(API_STORAGE_KEY) || DEFAULT_API_BASE_URL;
 
