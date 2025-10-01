@@ -238,6 +238,14 @@
             gap: 1rem;
         }
 
+        .status-tools {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            justify-content: flex-end;
+            flex-wrap: wrap;
+        }
+
         .header-stats {
             display: flex;
             gap: 2rem;
@@ -266,18 +274,48 @@
             align-items: center;
             gap: 0.5rem;
             padding: 0.5rem 1rem;
-            background: var(--primary-light);
             border-radius: 20px;
-            color: var(--primary-color);
             font-weight: 500;
+            background: rgba(148, 163, 184, 0.2);
+            color: var(--text-secondary);
+            transition: var(--transition);
         }
 
-        .status-dot {
+        .status-indicator .status-dot {
             width: 8px;
             height: 8px;
-            background: var(--accent-color);
             border-radius: 50%;
+            background: var(--warning-color);
             animation: pulse 2s infinite;
+        }
+
+        .status-indicator.checking {
+            background: rgba(255, 193, 7, 0.15);
+            color: var(--warning-color);
+        }
+
+        .status-indicator.checking .status-dot {
+            background: var(--warning-color);
+            animation: pulse 1.5s infinite;
+        }
+
+        .status-indicator.connected {
+            background: var(--primary-light);
+            color: var(--primary-color);
+        }
+
+        .status-indicator.connected .status-dot {
+            background: var(--accent-color);
+        }
+
+        .status-indicator.disconnected {
+            background: rgba(220, 53, 69, 0.12);
+            color: var(--danger-color);
+        }
+
+        .status-indicator.disconnected .status-dot {
+            background: var(--danger-color);
+            animation: none;
         }
 
         .btn {
@@ -881,7 +919,11 @@
         @media (max-width: 768px) {
             .top-header { flex-direction: column; gap: 1rem; padding: 1rem; height: auto; }
             .tab-content { padding: 1rem; }
+            .header-right { flex-direction: column; align-items: stretch; gap: 0.75rem; width: 100%; }
             .header-stats { flex-direction: column; gap: 1rem; text-align: center; }
+            .status-tools { width: 100%; flex-direction: column; align-items: stretch; gap: 0.5rem; }
+            .status-indicator { width: 100%; justify-content: center; }
+            .status-tools .btn { width: 100%; justify-content: center; }
             .section-header { flex-direction: column; align-items: stretch; gap: 1rem; }
             .header-actions { flex-direction: column; align-items: stretch; }
             .search-box input { width: 100%; }
@@ -985,9 +1027,19 @@
                             <span class="stat-value" id="totalFaqs">0</span>
                         </div>
                     </div>
-                    <div class="status-indicator">
-                        <div class="status-dot"></div>
-                        <span>정상 운영</span>
+                    <div class="status-tools">
+                        <div class="status-indicator checking" id="apiStatusIndicator" role="status" aria-live="polite" data-status="checking" title="연결 상태 확인 중">
+                            <div class="status-dot"></div>
+                            <span id="apiStatusText">연결 확인 중...</span>
+                        </div>
+                        <button class="btn btn-secondary" type="button" id="apiCheckButton">
+                            <i class="fas fa-plug"></i>
+                            연결 확인
+                        </button>
+                        <button class="btn btn-secondary" type="button" id="apiSettingsButton">
+                            <i class="fas fa-gear"></i>
+                            API 설정
+                        </button>
                     </div>
                 </div>
             </header>
@@ -1169,7 +1221,48 @@
     </div>
 
     <script>
-        const API_BASE_URL = localStorage.getItem('garam_api_base_url') || 'http://localhost:5000';
+        const API_STORAGE_KEY = 'garam_api_base_url';
+
+        function getDefaultApiBaseUrl() {
+            try {
+                const { origin, protocol } = window.location;
+                if (origin && /^https?:/i.test(protocol)) {
+                    return origin.replace(/\/$/, '');
+                }
+            } catch (error) {
+                console.warn('기본 API 주소 감지 실패:', error);
+            }
+            return 'http://localhost:5000';
+        }
+
+        const DEFAULT_API_BASE_URL = getDefaultApiBaseUrl();
+
+        let API_BASE_URL = localStorage.getItem(API_STORAGE_KEY) || DEFAULT_API_BASE_URL;
+
+        function normalizeApiBaseUrl(value) {
+            const raw = (value || '').trim();
+            if (!raw) {
+                throw new Error('API 기본 주소를 입력해주세요.');
+            }
+            let candidate = raw;
+            if (!/^https?:\/\//i.test(candidate)) {
+                candidate = `http://${candidate}`;
+            }
+            const url = new URL(candidate);
+            const pathname = url.pathname.replace(/\/+$/, '');
+            const normalizedPath = pathname === '/' ? '' : pathname;
+            return `${url.origin}${normalizedPath}`;
+        }
+
+        function setApiBaseUrl(newUrl, options = {}) {
+            const { persist = true } = options;
+            const normalized = normalizeApiBaseUrl(newUrl);
+            API_BASE_URL = normalized;
+            if (persist) {
+                localStorage.setItem(API_STORAGE_KEY, normalized);
+            }
+            return normalized;
+        }
 
         async function fetchJSON(url, options = {}) {
             const opts = { ...options };
@@ -1224,15 +1317,106 @@
             }
         }
 
+        function updateApiStatus(status, message) {
+            const indicator = document.getElementById('apiStatusIndicator');
+            const text = document.getElementById('apiStatusText');
+            if (!indicator || !text) {
+                return;
+            }
+            indicator.classList.remove('connected', 'disconnected', 'checking');
+            indicator.classList.add(status);
+            indicator.setAttribute('data-status', status);
+            indicator.setAttribute('aria-label', `API 상태: ${message}`);
+            indicator.setAttribute('title', `API 기본 주소: ${API_BASE_URL}`);
+            text.textContent = message;
+        }
+
+        async function checkApiConnection(options = {}) {
+            const { showSuccessToast = false, suppressErrorToast = false } = options;
+            updateApiStatus('checking', '연결 확인 중...');
+            try {
+                await fetchJSON(`${API_BASE_URL}/knowledge?limit=1`);
+                updateApiStatus('connected', '연결됨');
+                if (showSuccessToast) {
+                    showToast('지식베이스 API 연결이 확인되었습니다.', 'success');
+                }
+                return true;
+            } catch (error) {
+                let message = error instanceof Error ? error.message : '백엔드 연결에 실패했습니다.';
+                if (/failed to fetch/i.test(message) || /network/i.test(message)) {
+                    message = '서버에 연결할 수 없습니다. 주소와 네트워크 상태를 확인해주세요.';
+                }
+                updateApiStatus('disconnected', message);
+                if (!suppressErrorToast) {
+                    showToast(message, 'error');
+                }
+                return false;
+            }
+        }
+
+        function initializeApiControls() {
+            try {
+                setApiBaseUrl(API_BASE_URL);
+            } catch (error) {
+                console.warn('API 기본 주소 초기화 실패:', error);
+                try {
+                    setApiBaseUrl(DEFAULT_API_BASE_URL);
+                } catch (innerError) {
+                    console.error('기본 API 주소 설정 실패:', innerError);
+                }
+            }
+
+            updateApiStatus('checking', '연결 확인 중...');
+
+            const apiCheckButton = document.getElementById('apiCheckButton');
+            if (apiCheckButton) {
+                apiCheckButton.addEventListener('click', () => {
+                    checkApiConnection({ showSuccessToast: true });
+                });
+            }
+
+            const apiSettingsButton = document.getElementById('apiSettingsButton');
+            if (apiSettingsButton) {
+                apiSettingsButton.addEventListener('click', async () => {
+                    const input = prompt('지식베이스 API 기본 주소를 입력하세요.', API_BASE_URL);
+                    if (input === null) {
+                        return;
+                    }
+                    try {
+                        const previousBaseUrl = API_BASE_URL;
+                        const normalized = setApiBaseUrl(input);
+                        if (normalized === previousBaseUrl) {
+                            showToast('입력한 주소가 현재와 동일합니다. 연결 상태를 다시 확인합니다.', 'info');
+                            await checkApiConnection({ showSuccessToast: true });
+                            return;
+                        }
+                        showToast('API 기본 주소가 저장되었습니다.', 'success');
+                        const connected = await checkApiConnection({ suppressErrorToast: true, showSuccessToast: true });
+                        if (connected) {
+                            await initializeData();
+                        }
+                    } catch (error) {
+                        const message = error instanceof Error ? error.message : '유효한 주소를 입력해주세요.';
+                        showToast(message, 'error');
+                    }
+                });
+            }
+        }
+
         // 전역 상태
         let currentTab = 'documents';
         let documents = [];
         let faqList = [];
         let isUploading = false;
 
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
+            initializeApiControls();
             setupEventListeners();
-            initializeData();
+            const connected = await checkApiConnection({ suppressErrorToast: true });
+            if (!connected) {
+                console.warn('지식베이스 API 연결을 확인할 수 없습니다.');
+            }
+            await initializeData();
         });
 
         async function initializeData() {
