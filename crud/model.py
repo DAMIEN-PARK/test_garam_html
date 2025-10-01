@@ -16,7 +16,20 @@ def get(db: Session, model_id: int) -> Optional[Model]:
 
 def get_active(db: Session) -> Optional[Model]:
     stmt = select(Model).where(Model.is_active.is_(True)).limit(1)
-    return db.execute(stmt).scalar_one_or_none()
+    obj = db.execute(stmt).scalar_one_or_none()
+    if obj:
+        return obj
+
+    fallback_stmt = select(Model).order_by(Model.created_at.desc()).limit(1)
+    fallback = db.execute(fallback_stmt).scalar_one_or_none()
+    if not fallback:
+        return None
+
+    fallback.is_active = True
+    db.add(fallback)
+    db.commit()
+    db.refresh(fallback)
+    return fallback
 
 
 # 목록
