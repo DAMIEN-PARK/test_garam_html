@@ -845,78 +845,122 @@
     </div>
 
     <script>
-        // 전역 변수
+        const API_BASE_URL = window.API_BASE_URL || '';
         let inquiries = [];
-        let currentAdminUser = '김관리';
-        let adminUsers = [
-            { 
-                id: 'admin1', 
-                name: '김관리', 
-                email: 'kim@garampos.com', 
-                department: '고객지원팀',
-                assignedCount: 0,
-                completedCount: 0
-            },
-            { 
-                id: 'admin2', 
-                name: '이관리', 
-                email: 'lee@garampos.com', 
-                department: '기술지원팀',
-                assignedCount: 0,
-                completedCount: 0
-            },
-            { 
-                id: 'admin3', 
-                name: '박관리', 
-                email: 'park@garampos.com', 
-                department: '운영팀',
-                assignedCount: 0,
-                completedCount: 0
-            }
-        ];
+        let adminUsers = [];
+        let currentAdmin = null;
 
-        // DOM이 로드되면 실행
-        window.addEventListener('load', function() {
-            console.log('페이지 로드 완료');
+        window.addEventListener('load', () => {
             initializeApp();
         });
 
-        function initializeApp() {
+        async function initializeApp() {
             try {
-                // 샘플 데이터 로드
-                loadSampleInquiries();
-                
-                // 관리자 목록 렌더링
-                renderAdminGrid();
-                
-                // 통계 업데이트
-                updateStats();
-                
-                // 이벤트 리스너 등록
+                await refreshData();
                 setupEventListeners();
-                
                 console.log('앱 초기화 완료');
             } catch (error) {
                 console.error('초기화 오류:', error);
+                showToast(error.message || '데이터를 불러오는 중 오류가 발생했습니다.', 'error');
             }
         }
 
+        async function refreshData() {
+            await loadAdminUsers();
+            await loadInquiries();
+            updateAdminStats();
+            renderAdminGrid();
+            renderInquiries();
+            updateStats();
+            updateUserProfile();
+        }
+
+        function updateUserProfile() {
+            const userNameElement = document.querySelector('.user-name');
+            if (userNameElement) {
+                userNameElement.textContent = currentAdmin ? currentAdmin.name : '관리자';
+            }
+        }
+
+        async function loadAdminUsers() {
+            const data = await fetchJSON(`${API_BASE_URL}/admin_users?limit=100`);
+            adminUsers = data.map(admin => ({
+                id: admin.id,
+                name: admin.name,
+                email: admin.email,
+                department: admin.department,
+                assignedCount: 0,
+                completedCount: 0
+            }));
+
+            if (!currentAdmin || !adminUsers.some(admin => admin.id === currentAdmin.id)) {
+                currentAdmin = adminUsers.length > 0 ? adminUsers[0] : null;
+            }
+        }
+
+        async function loadInquiries() {
+            const [rawList, detailedList] = await Promise.all([
+                fetchJSON(`${API_BASE_URL}/inquiries?limit=100`),
+                fetchJSON(`${API_BASE_URL}/inquiries/get_inquiry_list`)
+            ]);
+
+            const detailById = new Map(detailedList.map(item => [item.id, item]));
+
+            inquiries = rawList.map(item => {
+                const detail = detailById.get(item.id) || {};
+                return {
+                    id: item.id,
+                    name: detail.name || item.customer_name,
+                    company: detail.company || item.company || '-',
+                    phone: detail.phone || item.phone || '-',
+                    content: detail.content || item.content || '',
+                    status: item.status,
+                    createdDate: detail.createdDate || formatDateTime(item.created_at),
+                    assignee: detail.assignee || getAdminNameById(item.assignee_admin_id),
+                    assignedDate: detail.assignedDate || formatDateTime(item.assigned_at),
+                    completedDate: detail.completedDate || formatDateTime(item.completed_at),
+                    history: Array.isArray(detail.history) ? detail.history : []
+                };
+            });
+        }
+
+        function formatDateTime(value) {
+            if (!value) return '';
+            const date = new Date(value);
+            if (Number.isNaN(date.getTime())) {
+                return '';
+            }
+            const pad = (num) => num.toString().padStart(2, '0');
+            const year = date.getFullYear();
+            const month = pad(date.getMonth() + 1);
+            const day = pad(date.getDate());
+            const hours = pad(date.getHours());
+            const minutes = pad(date.getMinutes());
+            return `${year}-${month}-${day} ${hours}:${minutes}`;
+        }
+
+        function getAdminById(adminId) {
+            return adminUsers.find(admin => admin.id === adminId) || null;
+        }
+
+        function getAdminNameById(adminId) {
+            const admin = getAdminById(adminId);
+            return admin ? admin.name : null;
+        }
+
         function setupEventListeners() {
-            // 관리자 추가 폼 이벤트
             const addAdminForm = document.getElementById('addAdminForm');
             if (addAdminForm) {
-                addAdminForm.addEventListener('submit', function(e) {
-                    e.preventDefault();
-                    addNewAdmin();
+                addAdminForm.addEventListener('submit', async function(event) {
+                    event.preventDefault();
+                    await addNewAdmin();
                 });
             }
 
-            // 모달 외부 클릭 시 닫기
             document.addEventListener('click', function(e) {
                 if (e.target.classList.contains('modal')) {
                     closeAddAdminModal();
                 }
-                // 드롭다운 외부 클릭 시 닫기
                 if (!e.target.closest('.assign-dropdown')) {
                     closeAllDropdowns();
                 }
@@ -927,8 +971,20 @@
             const adminGrid = document.getElementById('adminGrid');
             if (!adminGrid) return;
 
+            if (adminUsers.length === 0) {
+                adminGrid.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">
+                            <i class="fas fa-users-slash"></i>
+                        </div>
+                        <p>등록된 관리자가 없습니다.</p>
+                    </div>
+                `;
+                return;
+            }
+
             adminGrid.innerHTML = adminUsers.map(admin => {
-                const isCurrentUser = admin.name === currentAdminUser;
+                const isCurrentUser = currentAdmin && currentAdmin.id === admin.id;
                 return `
                     <div class="admin-card ${isCurrentUser ? 'current' : ''}">
                         ${isCurrentUser ? '<div class="current-badge">현재 사용자</div>' : ''}
@@ -951,12 +1007,12 @@
                             </div>
                         </div>
                         <div class="admin-actions">
-                            ${!isCurrentUser ? `
-                                <button class="btn btn-sm btn-primary" onclick="switchToAdmin('${admin.name}')">
+                            ${!isCurrentUser && adminUsers.length > 0 ? `
+                                <button class="btn btn-sm btn-primary" onclick="switchToAdmin(${admin.id})">
                                     <i class="fas fa-exchange-alt"></i> 전환
                                 </button>
                             ` : ''}
-                            <button class="btn btn-sm btn-danger" onclick="removeAdmin('${admin.id}')" ${isCurrentUser ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''}>
+                            <button class="btn btn-sm btn-danger" onclick="removeAdmin(${admin.id})" ${isCurrentUser ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''}>
                                 <i class="fas fa-trash"></i> 삭제
                             </button>
                         </div>
@@ -965,23 +1021,20 @@
             }).join('');
         }
 
-        function switchToAdmin(adminName) {
-            currentAdminUser = adminName;
-            const userNameElement = document.querySelector('.user-name');
-            if (userNameElement) {
-                userNameElement.textContent = currentAdminUser;
-            }
-            
+        function switchToAdmin(adminId) {
+            const admin = getAdminById(adminId);
+            if (!admin) return;
+            currentAdmin = admin;
+            updateUserProfile();
             renderAdminGrid();
             renderInquiries();
-            showToast(`${adminName}으로 전환되었습니다.`, 'info');
+            showToast(`${admin.name}으로 전환되었습니다.`, 'info');
         }
 
         function openAddAdminModal() {
             const modal = document.getElementById('addAdminModal');
             if (modal) {
                 modal.classList.add('show');
-                // 폼 초기화
                 document.getElementById('adminName').value = '';
                 document.getElementById('adminEmail').value = '';
                 document.getElementById('adminDepartment').value = '';
@@ -995,7 +1048,7 @@
             }
         }
 
-        function addNewAdmin() {
+        async function addNewAdmin() {
             const name = document.getElementById('adminName').value.trim();
             const email = document.getElementById('adminEmail').value.trim();
             const department = document.getElementById('adminDepartment').value.trim() || '일반';
@@ -1005,157 +1058,68 @@
                 return;
             }
 
-            // 이메일 중복 확인
-            if (adminUsers.some(admin => admin.email === email)) {
-                showToast('이미 등록된 이메일입니다.', 'error');
+            const password = prompt('초기 비밀번호를 입력하세요:');
+            if (!password) {
+                showToast('비밀번호를 입력해야 합니다.', 'error');
                 return;
             }
 
-            // 새 관리자 추가
-            const newAdmin = {
-                id: 'admin' + (Date.now()),
-                name: name,
-                email: email,
-                department: department,
-                assignedCount: 0,
-                completedCount: 0
-            };
+            try {
+                await fetchJSON(`${API_BASE_URL}/admin_users`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name,
+                        email,
+                        department,
+                        password
+                    })
+                });
 
-            adminUsers.push(newAdmin);
-            renderAdminGrid();
-            closeAddAdminModal();
-            showToast(`${name} 관리자가 추가되었습니다.`, 'success');
+                await refreshData();
+                closeAddAdminModal();
+                showToast(`${name} 관리자가 추가되었습니다.`, 'success');
+            } catch (error) {
+                console.error(error);
+                showToast(error.message || '관리자 추가 중 오류가 발생했습니다.', 'error');
+            }
         }
 
-        function removeAdmin(adminId) {
-            const admin = adminUsers.find(a => a.id === adminId);
+        async function removeAdmin(adminId) {
+            const admin = getAdminById(adminId);
             if (!admin) return;
 
-            if (admin.name === currentAdminUser) {
+            if (currentAdmin && admin.id === currentAdmin.id) {
                 showToast('현재 사용자는 삭제할 수 없습니다.', 'error');
                 return;
             }
 
-            if (confirm(`${admin.name} 관리자를 삭제하시겠습니까?`)) {
-                // 해당 관리자에게 할당된 문의가 있는지 확인
-                const assignedInquiries = inquiries.filter(inq => inq.assignee === admin.name);
-                
-                if (assignedInquiries.length > 0) {
-                    if (!confirm(`${admin.name}에게 할당된 ${assignedInquiries.length}개의 문의가 있습니다. 정말 삭제하시겠습니까? (할당된 문의는 미할당 상태가 됩니다.)`)) {
-                        return;
-                    }
-                    
-                    // 할당된 문의들을 미할당 상태로 변경
-                    assignedInquiries.forEach(inq => {
-                        inq.assignee = null;
-                        inq.status = 'new';
-                        inq.history.push({
-                            action: '담당자 삭제로 인한 미할당',
-                            admin: '시스템',
-                            timestamp: new Date().toISOString().slice(0, 16).replace('T', ' '),
-                            details: `${admin.name} 관리자 삭제로 인해 미할당 상태로 변경되었습니다.`
-                        });
-                    });
+            const assignedInquiries = inquiries.filter(inq => inq.assignee === admin.name);
+            if (assignedInquiries.length > 0) {
+                const confirmTransfer = confirm(`${admin.name}에게 할당된 ${assignedInquiries.length}개의 문의가 있습니다. 삭제하면 미할당 상태가 됩니다. 계속하시겠습니까?`);
+                if (!confirmTransfer) {
+                    return;
                 }
-
-                adminUsers = adminUsers.filter(a => a.id !== adminId);
-                renderAdminGrid();
-                renderInquiries();
-                updateStats();
-                showToast(`${admin.name} 관리자가 삭제되었습니다.`, 'success');
+            } else if (!confirm(`${admin.name} 관리자를 삭제하시겠습니까?`)) {
+                return;
             }
-        }
 
-        function loadSampleInquiries() {
-            inquiries = [
-                {
-                    id: 1,
-                    name: '홍길동',
-                    company: '가람포스텍',
-                    phone: '010-1234-5678',
-                    content: 'POS 시스템이 갑자기 꺼져서 재부팅을 해도 계속 같은 문제가 발생합니다. 긴급히 해결이 필요합니다.',
-                    status: 'new',
-                    createdDate: '2024-12-20 14:30',
-                    assignee: null,
-                    history: [
-                        {
-                            action: '문의 접수',
-                            admin: '시스템',
-                            timestamp: '2024-12-20 14:30',
-                            details: '챗봇을 통해 문의가 접수되었습니다.'
-                        }
-                    ]
-                },
-                {
-                    id: 2,
-                    name: '김영희',
-                    company: '스마트카페',
-                    phone: '010-2345-6789',
-                    content: '키오스크 터치 반응이 느려서 고객들이 불편해하고 있습니다. 설정 방법을 알려주세요.',
-                    status: 'processing',
-                    createdDate: '2024-12-20 13:15',
-                    assignee: '이관리',
-                    assignedDate: '2024-12-20 13:45',
-                    history: [
-                        {
-                            action: '문의 접수',
-                            admin: '시스템',
-                            timestamp: '2024-12-20 13:15',
-                            details: '챗봇을 통해 문의가 접수되었습니다.'
-                        },
-                        {
-                            action: '담당자 배정',
-                            admin: '이관리',
-                            timestamp: '2024-12-20 13:45',
-                            details: '이관리님이 문의를 담당하게 되었습니다.'
-                        }
-                    ]
-                },
-                {
-                    id: 3,
-                    name: '박철수',
-                    company: '베이커리하우스',
-                    phone: '010-3456-7890',
-                    content: '프린터에서 영수증이 출력되지 않습니다. 용지는 충분한 상태인데 어떻게 해야 할까요?',
-                    status: 'completed',
-                    createdDate: '2024-12-19 16:20',
-                    assignee: '김관리',
-                    assignedDate: '2024-12-19 16:30',
-                    completedDate: '2024-12-20 09:30',
-                    history: [
-                        {
-                            action: '문의 접수',
-                            admin: '시스템',
-                            timestamp: '2024-12-19 16:20',
-                            details: '챗봇을 통해 문의가 접수되었습니다.'
-                        },
-                        {
-                            action: '담당자 배정',
-                            admin: '김관리',
-                            timestamp: '2024-12-19 16:30',
-                            details: '김관리님이 문의를 담당하게 되었습니다.'
-                        },
-                        {
-                            action: '처리 완료',
-                            admin: '김관리',
-                            timestamp: '2024-12-20 09:30',
-                            details: '프린터 드라이버 재설치로 문제가 해결되었습니다.'
-                        }
-                    ]
-                }
-            ];
-            
-            // 관리자별 통계 업데이트
-            updateAdminStats();
-            renderInquiries();
+            try {
+                await fetchJSON(`${API_BASE_URL}/admin_users/${adminId}`, { method: 'DELETE' });
+                await refreshData();
+                showToast(`${admin.name} 관리자가 삭제되었습니다.`, 'success');
+            } catch (error) {
+                console.error(error);
+                showToast(error.message || '관리자 삭제 중 오류가 발생했습니다.', 'error');
+            }
         }
 
         function updateAdminStats() {
             adminUsers.forEach(admin => {
-                admin.assignedCount = inquiries.filter(inq => 
+                admin.assignedCount = inquiries.filter(inq =>
                     inq.assignee === admin.name && (inq.status === 'processing' || inq.status === 'on_hold')
                 ).length;
-                admin.completedCount = inquiries.filter(inq => 
+                admin.completedCount = inquiries.filter(inq =>
                     inq.assignee === admin.name && inq.status === 'completed'
                 ).length;
             });
@@ -1164,7 +1128,7 @@
         function renderInquiries() {
             const listContainer = document.getElementById('inquiryList');
             if (!listContainer) return;
-            
+
             if (inquiries.length === 0) {
                 listContainer.innerHTML = `
                     <div class="empty-state">
@@ -1187,7 +1151,7 @@
             const statusClass = {
                 'new': 'status-new',
                 'processing': 'status-processing',
-                'on_hold': 'status-on_hold', 
+                'on_hold': 'status-on_hold',
                 'completed': 'status-completed'
             };
 
@@ -1212,6 +1176,32 @@
                     </div>
                 `).join('');
 
+                const assignOptions = adminUsers.length > 0
+                    ? adminUsers.map(admin => `
+                        <div class="assign-dropdown-item" onclick="assignInquiry(${inquiry.id}, ${admin.id})">
+                            <div class="admin-avatar">${admin.name.charAt(0)}</div>
+                            <div>
+                                <div style="font-weight: 600;">${admin.name}</div>
+                                <div style="font-size: 0.75rem; color: var(--text-secondary);">${admin.department}</div>
+                            </div>
+                        </div>
+                    `).join('')
+                    : '<div class="assign-dropdown-item" style="cursor: default;">등록된 관리자가 없습니다.</div>';
+
+                const transferOptions = adminUsers
+                    .filter(admin => !currentAdmin || admin.id !== currentAdmin.id)
+                    .map(admin => `
+                        <div class="assign-dropdown-item" onclick="transferInquiry(${inquiry.id}, ${admin.id})">
+                            <div class="admin-avatar">${admin.name.charAt(0)}</div>
+                            <div>
+                                <div style="font-weight: 600;">${admin.name}</div>
+                                <div style="font-size: 0.75rem; color: var(--text-secondary);">${admin.department}</div>
+                            </div>
+                        </div>
+                    `).join('');
+
+                const isCurrentAssignee = currentAdmin && inquiry.assignee === currentAdmin.name;
+
                 let actionButtons = '';
                 if (inquiry.status === 'new') {
                     actionButtons = `
@@ -1220,19 +1210,11 @@
                                 <i class="fas fa-user-plus"></i> 담당자 지정
                             </button>
                             <div class="assign-dropdown-menu" id="dropdown-${inquiry.id}">
-                                ${adminUsers.map(admin => `
-                                    <div class="assign-dropdown-item" onclick="assignInquiry(${inquiry.id}, '${admin.name}')">
-                                        <div class="admin-avatar">${admin.name.charAt(0)}</div>
-                                        <div>
-                                            <div style="font-weight: 600;">${admin.name}</div>
-                                            <div style="font-size: 0.75rem; color: var(--text-secondary);">${admin.department}</div>
-                                        </div>
-                                    </div>
-                                `).join('')}
+                                ${assignOptions}
                             </div>
                         </div>
                     `;
-                } else if (inquiry.status === 'processing' && inquiry.assignee === currentAdminUser) {
+                } else if (inquiry.status === 'processing' && isCurrentAssignee) {
                     actionButtons = `
                         <div class="action-buttons">
                             <button class="btn btn-info btn-sm" onclick="contactCustomer(${inquiry.id})"><i class="fas fa-phone"></i> 연락</button>
@@ -1243,21 +1225,13 @@
                                     <i class="fas fa-exchange-alt"></i> 이관
                                 </button>
                                 <div class="assign-dropdown-menu" id="transfer-dropdown-${inquiry.id}">
-                                    ${adminUsers.filter(admin => admin.name !== currentAdminUser).map(admin => `
-                                        <div class="assign-dropdown-item" onclick="transferInquiry(${inquiry.id}, '${admin.name}')">
-                                            <div class="admin-avatar">${admin.name.charAt(0)}</div>
-                                            <div>
-                                                <div style="font-weight: 600;">${admin.name}</div>
-                                                <div style="font-size: 0.75rem; color: var(--text-secondary);">${admin.department}</div>
-                                            </div>
-                                        </div>
-                                    `).join('')}
+                                    ${transferOptions || '<div class="assign-dropdown-item" style="cursor: default;">이관 가능한 관리자가 없습니다.</div>'}
                                 </div>
                             </div>
                             <button class="btn btn-success btn-sm" onclick="markAsCompleted(${inquiry.id})"><i class="fas fa-check"></i> 완료</button>
                         </div>
                     `;
-                } else if (inquiry.status === 'on_hold' && inquiry.assignee === currentAdminUser) {
+                } else if (inquiry.status === 'on_hold' && isCurrentAssignee) {
                     actionButtons = `
                         <div class="action-buttons">
                             <button class="btn btn-info btn-sm" onclick="resumeProcessing(${inquiry.id})"><i class="fas fa-play"></i> 재개</button>
@@ -1267,15 +1241,7 @@
                                     <i class="fas fa-exchange-alt"></i> 이관
                                 </button>
                                 <div class="assign-dropdown-menu" id="transfer-dropdown-${inquiry.id}">
-                                    ${adminUsers.filter(admin => admin.name !== currentAdminUser).map(admin => `
-                                        <div class="assign-dropdown-item" onclick="transferInquiry(${inquiry.id}, '${admin.name}')">
-                                            <div class="admin-avatar">${admin.name.charAt(0)}</div>
-                                            <div>
-                                                <div style="font-weight: 600;">${admin.name}</div>
-                                                <div style="font-size: 0.75rem; color: var(--text-secondary);">${admin.department}</div>
-                                            </div>
-                                        </div>
-                                    `).join('')}
+                                    ${transferOptions || '<div class="assign-dropdown-item" style="cursor: default;">이관 가능한 관리자가 없습니다.</div>'}
                                 </div>
                             </div>
                             <button class="btn btn-success btn-sm" onclick="markAsCompleted(${inquiry.id})"><i class="fas fa-check"></i> 완료</button>
@@ -1338,26 +1304,28 @@
             });
         }
 
-        function assignInquiry(inquiryId, adminName) {
-            const inquiry = inquiries.find(inq => inq.id === inquiryId);
-            if (inquiry && inquiry.status === 'new') {
-                inquiry.status = 'processing';
-                inquiry.assignee = adminName;
-                inquiry.assignedDate = new Date().toISOString().slice(0, 16).replace('T', ' ');
-                
-                inquiry.history.push({
-                    action: '담당자 배정',
-                    admin: currentAdminUser,
-                    timestamp: inquiry.assignedDate,
-                    details: `${adminName}님이 문의를 담당하게 되었습니다.`
+        async function assignInquiry(inquiryId, adminId) {
+            const admin = getAdminById(adminId);
+            if (!admin) {
+                showToast('선택한 관리자를 찾을 수 없습니다.', 'error');
+                return;
+            }
+            try {
+                await fetchJSON(`${API_BASE_URL}/inquiries/${inquiryId}/assign`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        admin_id: adminId,
+                        actor_admin_id: currentAdmin ? currentAdmin.id : null
+                    })
                 });
-
-                updateAdminStats();
-                renderAdminGrid();
-                renderInquiries();
-                updateStats();
+                showToast(`${admin.name}님에게 문의가 배정되었습니다.`, 'info');
+                await refreshData();
+            } catch (error) {
+                console.error(error);
+                showToast(error.message || '문의 배정 중 오류가 발생했습니다.', 'error');
+            } finally {
                 closeAllDropdowns();
-                showToast(`${adminName}님에게 문의가 배정되었습니다.`, 'info');
             }
         }
 
@@ -1380,146 +1348,252 @@
             }
         }
 
-        // 나머지 함수들 (기존과 동일)
-        function contactCustomer(id) {
+        async function contactCustomer(id) {
             const inquiry = inquiries.find(inq => inq.id === id);
-            if (inquiry && inquiry.assignee === currentAdminUser) {
-                const contactMethod = prompt('연락 방법을 선택하세요:\n1. 전화\n2. 이메일\n3. SMS\n번호를 입력하세요:');
-                if (contactMethod) {
-                    const methodText = {'1': '전화', '2': '이메일', '3': 'SMS'}[contactMethod] || '기타';
-                    const contactNote = prompt('연락 내용을 입력하세요:');
-                    
-                    if (contactNote) {
-                        inquiry.history.push({
-                            action: '고객 연락',
-                            admin: currentAdminUser,
-                            timestamp: new Date().toISOString().slice(0, 16).replace('T', ' '),
-                            details: `${methodText}로 연락 - ${contactNote}`
-                        });
+            if (!inquiry || !currentAdmin || inquiry.assignee !== currentAdmin.name) {
+                return;
+            }
 
-                        renderInquiries();
-                        showToast(`${methodText}로 고객에게 연락했습니다.`, 'info');
-                    }
-                }
+            const contactMethod = prompt('연락 방법을 선택하세요:\n1. 전화\n2. 이메일\n3. SMS\n번호를 입력하세요:');
+            if (!contactMethod) {
+                return;
+            }
+
+            const methodText = { '1': '전화', '2': '이메일', '3': 'SMS' }[contactMethod] || '기타';
+            const contactNote = prompt('연락 내용을 입력하세요:');
+            if (!contactNote) {
+                return;
+            }
+
+            try {
+                await fetchJSON(`${API_BASE_URL}/inquiries/${id}/histories/note`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        admin_id: currentAdmin.id,
+                        details: `${methodText}로 연락 - ${contactNote}`
+                    })
+                });
+                showToast(`${methodText}로 고객에게 연락했습니다.`, 'info');
+                await refreshData();
+            } catch (error) {
+                console.error(error);
+                showToast(error.message || '연락 기록 저장 중 오류가 발생했습니다.', 'error');
             }
         }
 
-        function addMemo(id) {
+        async function addMemo(id) {
             const inquiry = inquiries.find(inq => inq.id === id);
-            if (inquiry && inquiry.assignee === currentAdminUser) {
-                const memo = prompt('처리 메모를 입력하세요:');
-                if (memo) {
-                    inquiry.history.push({
-                        action: '메모 추가',
-                        admin: currentAdminUser,
-                        timestamp: new Date().toISOString().slice(0, 16).replace('T', ' '),
+            if (!inquiry || !currentAdmin || inquiry.assignee !== currentAdmin.name) {
+                return;
+            }
+
+            const memo = prompt('처리 메모를 입력하세요:');
+            if (!memo) {
+                return;
+            }
+
+            try {
+                await fetchJSON(`${API_BASE_URL}/inquiries/${id}/histories/note`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        admin_id: currentAdmin.id,
                         details: memo
-                    });
-
-                    renderInquiries();
-                    showToast('메모가 추가되었습니다.', 'info');
-                }
+                    })
+                });
+                showToast('메모가 추가되었습니다.', 'info');
+                await refreshData();
+            } catch (error) {
+                console.error(error);
+                showToast(error.message || '메모 추가 중 오류가 발생했습니다.', 'error');
             }
         }
 
-        function setOnHold(id) {
+        async function setOnHold(id) {
             const inquiry = inquiries.find(inq => inq.id === id);
-            if (inquiry && inquiry.assignee === currentAdminUser) {
-                const reason = prompt('대기 사유를 입력하세요:');
-                if (reason) {
-                    inquiry.status = 'on_hold';
-                    inquiry.history.push({
-                        action: '처리 대기',
-                        admin: currentAdminUser,
-                        timestamp: new Date().toISOString().slice(0, 16).replace('T', ' '),
+            if (!inquiry || !currentAdmin || inquiry.assignee !== currentAdmin.name) {
+                return;
+            }
+
+            const reason = prompt('대기 사유를 입력하세요:');
+            if (!reason) {
+                return;
+            }
+
+            try {
+                await fetchJSON(`${API_BASE_URL}/inquiries/${id}/status`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        status: 'on_hold',
+                        actor_admin_id: currentAdmin.id,
                         details: reason
-                    });
-
-                    updateAdminStats();
-                    renderAdminGrid();
-                    renderInquiries();
-                    updateStats();
-                    showToast('문의가 대기 상태로 변경되었습니다.', 'info');
-                }
+                    })
+                });
+                showToast('문의가 대기 상태로 변경되었습니다.', 'info');
+                await refreshData();
+            } catch (error) {
+                console.error(error);
+                showToast(error.message || '대기 처리 중 오류가 발생했습니다.', 'error');
             }
         }
 
-        function resumeProcessing(id) {
+        async function resumeProcessing(id) {
             const inquiry = inquiries.find(inq => inq.id === id);
-            if (inquiry && inquiry.assignee === currentAdminUser && inquiry.status === 'on_hold') {
-                inquiry.status = 'processing';
-                inquiry.history.push({
-                    action: '처리 재개',
-                    admin: currentAdminUser,
-                    timestamp: new Date().toISOString().slice(0, 16).replace('T', ' '),
-                    details: '대기 상태에서 처리를 재개했습니다.'
-                });
+            if (!inquiry || !currentAdmin || inquiry.assignee !== currentAdmin.name || inquiry.status !== 'on_hold') {
+                return;
+            }
 
-                updateAdminStats();
-                renderAdminGrid();
-                renderInquiries();
-                updateStats();
+            try {
+                await fetchJSON(`${API_BASE_URL}/inquiries/${id}/status`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        status: 'processing',
+                        actor_admin_id: currentAdmin.id,
+                        details: '대기 상태에서 처리를 재개했습니다.'
+                    })
+                });
                 showToast('문의 처리를 재개합니다.', 'info');
+                await refreshData();
+            } catch (error) {
+                console.error(error);
+                showToast(error.message || '처리 재개 중 오류가 발생했습니다.', 'error');
             }
         }
 
-        function transferInquiry(inquiryId, newAssignee) {
+        async function transferInquiry(inquiryId, newAdminId) {
             const inquiry = inquiries.find(inq => inq.id === inquiryId);
-            if (inquiry && inquiry.assignee === currentAdminUser) {
-                const reason = prompt('이관 사유를 입력하세요:');
-                const oldAssignee = inquiry.assignee;
-                
-                inquiry.assignee = newAssignee;
-                inquiry.history.push({
-                    action: '담당자 이관',
-                    admin: currentAdminUser,
-                    timestamp: new Date().toISOString().slice(0, 16).replace('T', ' '),
-                    details: `${oldAssignee} → ${newAssignee} (사유: ${reason || '없음'})`
+            const newAdmin = getAdminById(newAdminId);
+            if (!inquiry || !currentAdmin || inquiry.assignee !== currentAdmin.name || !newAdmin) {
+                return;
+            }
+
+            const reason = prompt('이관 사유를 입력하세요:');
+
+            try {
+                await fetchJSON(`${API_BASE_URL}/inquiries/${inquiryId}/transfer`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        to_admin_id: newAdminId,
+                        actor_admin_id: currentAdmin.id
+                    })
                 });
 
-                updateAdminStats();
-                renderAdminGrid();
-                renderInquiries();
-                closeAllDropdowns();
-                showToast(`${newAssignee}님에게 이관되었습니다.`, 'info');
-            }
-        }
-
-        function markAsCompleted(id) {
-            const inquiry = inquiries.find(inq => inq.id === id);
-            if (inquiry && (inquiry.status === 'processing' || inquiry.status === 'on_hold') && inquiry.assignee === currentAdminUser) {
-                const response = prompt('처리 결과를 입력해주세요:');
-                if (response) {
-                    const customerSatisfied = confirm('고객이 만족했습니까?');
-                    
-                    inquiry.status = 'completed';
-                    inquiry.completedDate = new Date().toISOString().slice(0, 16).replace('T', ' ');
-                    inquiry.customerSatisfaction = customerSatisfied;
-                    
-                    inquiry.history.push({
-                        action: '처리 완료',
-                        admin: currentAdminUser,
-                        timestamp: inquiry.completedDate,
-                        details: `${response} (고객 만족도: ${customerSatisfied ? '만족' : '불만족'})`
+                if (reason) {
+                    await fetchJSON(`${API_BASE_URL}/inquiries/${inquiryId}/histories/note`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            admin_id: currentAdmin.id,
+                            details: `이관 사유: ${reason}`
+                        })
                     });
-
-                    updateAdminStats();
-                    renderAdminGrid();
-                    renderInquiries();
-                    updateStats();
-                    showToast('문의가 완료 처리되었습니다.', 'success');
                 }
+
+                showToast(`${newAdmin.name}님에게 이관되었습니다.`, 'info');
+                await refreshData();
+            } catch (error) {
+                console.error(error);
+                showToast(error.message || '문의 이관 중 오류가 발생했습니다.', 'error');
+            } finally {
+                closeAllDropdowns();
             }
         }
 
-        function deleteInquiry(id) {
-            if (confirm('이 문의를 삭제하시겠습니까?')) {
-                inquiries = inquiries.filter(inq => inq.id !== id);
-                updateAdminStats();
-                renderAdminGrid();
-                renderInquiries();
-                updateStats();
+        async function markAsCompleted(id) {
+            const inquiry = inquiries.find(inq => inq.id === id);
+            if (!inquiry || !currentAdmin || inquiry.assignee !== currentAdmin.name || (inquiry.status !== 'processing' && inquiry.status !== 'on_hold')) {
+                return;
+            }
+
+            const response = prompt('처리 결과를 입력해주세요:');
+            if (!response) {
+                return;
+            }
+
+            const customerSatisfied = confirm('고객이 만족했습니까? (확인=만족, 취소=불만족)');
+
+            try {
+                await fetchJSON(`${API_BASE_URL}/inquiries/${id}/status`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        status: 'completed',
+                        actor_admin_id: currentAdmin.id,
+                        details: response
+                    })
+                });
+
+                await fetchJSON(`${API_BASE_URL}/inquiries/${id}/satisfaction`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        satisfaction: customerSatisfied ? 'satisfied' : 'unsatisfied'
+                    })
+                });
+
+                showToast('문의가 완료 처리되었습니다.', 'success');
+                await refreshData();
+            } catch (error) {
+                console.error(error);
+                showToast(error.message || '완료 처리 중 오류가 발생했습니다.', 'error');
+            }
+        }
+
+        async function deleteInquiry(id) {
+            if (!confirm('이 문의를 삭제하시겠습니까?')) {
+                return;
+            }
+
+            try {
+                await fetchJSON(`${API_BASE_URL}/inquiries/${id}`, { method: 'DELETE' });
                 showToast('문의가 삭제되었습니다.', 'success');
+                await refreshData();
+            } catch (error) {
+                console.error(error);
+                showToast(error.message || '문의 삭제 중 오류가 발생했습니다.', 'error');
+            }
+        }
+
+        async function fetchJSON(url, options = {}) {
+            try {
+                const response = await fetch(url, options);
+                if (!response.ok) {
+                    let message = `HTTP ${response.status}`;
+                    try {
+                        const data = await response.json();
+                        if (data?.detail) {
+                            message = data.detail;
+                        } else if (typeof data === 'string') {
+                            message = data;
+                        }
+                    } catch (jsonError) {
+                        // ignore json parse error
+                    }
+                    throw new Error(message);
+                }
+
+                if (response.status === 204) {
+                    return null;
+                }
+
+                const text = await response.text();
+                if (!text) {
+                    return null;
+                }
+                try {
+                    return JSON.parse(text);
+                } catch (parseError) {
+                    return null;
+                }
+            } catch (error) {
+                if (error instanceof Error) {
+                    throw error;
+                }
+                throw new Error('네트워크 오류가 발생했습니다.');
             }
         }
 
@@ -1527,13 +1601,13 @@
             const toast = document.createElement('div');
             toast.className = `toast ${type}`;
             toast.textContent = message;
-            
+
             document.body.appendChild(toast);
-            
+
             setTimeout(() => {
                 toast.classList.add('show');
             }, 100);
-            
+
             setTimeout(() => {
                 toast.classList.remove('show');
                 setTimeout(() => {
