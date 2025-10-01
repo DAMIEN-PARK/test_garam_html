@@ -4,6 +4,45 @@ from typing import Optional, List, Dict, Any, Literal
 from sqlalchemy import select, update as sa_update
 from sqlalchemy.orm import Session
 from models.model import Model
+from core import config
+from langchain_service.llm.setup import ensure_openai_provider, ensure_openai_model
+
+
+_DEFAULT_MODEL_NAME = "OpenAI 기본 모델"
+_DEFAULT_STATUS_TEXT = "자동 활성화됨"
+
+
+def _seed_default_model(db: Session) -> Model:
+    """OpenAI 기본 모델이 전혀 없을 때 자동으로 하나 생성한다."""
+
+    default_llm = ensure_openai_model(config.DEFAULT_CHAT_MODEL)
+    seed = Model(
+        name=f"{_DEFAULT_MODEL_NAME} ({default_llm})",
+        provider_name=ensure_openai_provider(None),
+        description=f"{default_llm} 모델을 사용하는 테스트 단계 기본 구성입니다.",
+        features=[
+            {"label": "engine", "value": default_llm},
+            "OpenAI API 기반 응답",
+        ],
+        is_active=True,
+        status_text=_DEFAULT_STATUS_TEXT,
+    )
+    db.add(seed)
+    db.commit()
+    db.refresh(seed)
+    return seed
+
+
+def _normalize_provider(db: Session, obj: Model) -> Model:
+    """저장된 제공자명을 OpenAI로 정규화한다."""
+
+    target = ensure_openai_provider(obj.provider_name)
+    if obj.provider_name != target:
+        obj.provider_name = target
+        db.add(obj)
+        db.commit()
+        db.refresh(obj)
+    return obj
 
 OrderBy = Literal["recent", "accuracy", "uptime", "speed", "conversations"]
 
@@ -15,7 +54,27 @@ def get(db: Session, model_id: int) -> Optional[Model]:
 
 def get_active(db: Session) -> Optional[Model]:
     stmt = select(Model).where(Model.is_active.is_(True)).limit(1)
-    return db.execute(stmt).scalar_one_or_none()
+    obj = db.execute(stmt).scalar_one_or_none()
+    if obj:
+        return _normalize_provider(db, obj)
+
+    fallback_stmt = select(Model).order_by(Model.created_at.desc()).limit(1)
+    fallback = db.execute(fallback_stmt).scalar_one_or_none()
+    if fallback:
+        fallback = _normalize_provider(db, fallback)
+        if not fallback.is_active:
+            db.execute(
+                sa_update(Model)
+                .where(Model.is_active.is_(True), Model.id != fallback.id)
+                .values(is_active=False)
+            )
+            fallback.is_active = True
+            db.add(fallback)
+            db.commit()
+            db.refresh(fallback)
+        return fallback
+
+    return _seed_default_model(db)
 
 
 # 목록
@@ -33,7 +92,7 @@ def list_models(
     stmt = select(Model)
 
     if provider_name:
-        stmt = stmt.where(Model.provider_name == provider_name)
+        stmt = stmt.where(Model.provider_name == ensure_openai_provider(provider_name))
     if is_active is not None:
         stmt = stmt.where(Model.is_active.is_(is_active))
     if q:
@@ -57,6 +116,8 @@ def list_models(
 
 # 생성
 def create(db: Session, data: Dict[str, Any]) -> Model:
+    data = dict(data)
+    data["provider_name"] = ensure_openai_provider(data.get("provider_name"))
     obj = Model(**data)
     db.add(obj)
     db.commit()
@@ -70,6 +131,8 @@ def update(db: Session, model_id: int, data: Dict[str, Any]) -> Optional[Model]:
     if not obj:
         return None
     for k, v in data.items():
+        if k == "provider_name":
+            v = ensure_openai_provider(v)
         setattr(obj, k, v)
     db.add(obj)
     db.commit()
