@@ -1,6 +1,6 @@
 # Pydantic 스키마 (요청/응답)
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from datetime import datetime
 from typing import Optional, Literal, List, Union
 
@@ -9,7 +9,7 @@ FeatureItem = Union[dict, str, int, float, bool]
 
 class ModelBase(BaseModel):
     name: str
-    provider_name: str
+    provider_name: str = Field(default="openai")
     description: str
     features: List[FeatureItem] = Field(default_factory=list)
 
@@ -26,6 +26,11 @@ class ModelBase(BaseModel):
     restrict_non_tech: bool = False
     fast_response_mode: bool = False
     suggest_agent_handoff: bool = False
+
+    @field_validator("provider_name", mode="before")
+    @classmethod
+    def _force_openai(cls, value: str) -> str:
+        return "openai"
 
 
 class ModelCreate(ModelBase):
@@ -51,6 +56,11 @@ class ModelUpdate(BaseModel):
     restrict_non_tech: Optional[bool] = None
     fast_response_mode: Optional[bool] = None
     suggest_agent_handoff: Optional[bool] = None
+
+    @field_validator("provider_name", mode="before")
+    @classmethod
+    def _force_openai(cls, value: Optional[str]) -> str:
+        return "openai"
 
 
 class ModelResponse(ModelBase):

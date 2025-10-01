@@ -4,6 +4,7 @@ from typing import Optional, List, Dict, Any, Literal
 from sqlalchemy import select, update as sa_update
 from sqlalchemy.orm import Session
 from models.model import Model
+from langchain_service.llm.setup import ensure_openai_provider
 
 OrderBy = Literal["recent", "accuracy", "uptime", "speed", "conversations"]
 
@@ -33,7 +34,7 @@ def list_models(
     stmt = select(Model)
 
     if provider_name:
-        stmt = stmt.where(Model.provider_name == provider_name)
+        stmt = stmt.where(Model.provider_name == ensure_openai_provider(provider_name))
     if is_active is not None:
         stmt = stmt.where(Model.is_active.is_(is_active))
     if q:
@@ -57,6 +58,8 @@ def list_models(
 
 # 생성
 def create(db: Session, data: Dict[str, Any]) -> Model:
+    data = dict(data)
+    data["provider_name"] = ensure_openai_provider(data.get("provider_name"))
     obj = Model(**data)
     db.add(obj)
     db.commit()
@@ -70,6 +73,8 @@ def update(db: Session, model_id: int, data: Dict[str, Any]) -> Optional[Model]:
     if not obj:
         return None
     for k, v in data.items():
+        if k == "provider_name":
+            v = ensure_openai_provider(v)
         setattr(obj, k, v)
     db.add(obj)
     db.commit()
