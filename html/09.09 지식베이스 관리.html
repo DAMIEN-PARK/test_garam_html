@@ -978,11 +978,11 @@
                     <div class="header-stats">
                         <div class="stat-item">
                             <span class="stat-label">활성 문서</span>
-                            <span class="stat-value" id="totalDocuments">3</span>
+                            <span class="stat-value" id="totalDocuments">0</span>
                         </div>
                         <div class="stat-item">
                             <span class="stat-label">FAQ</span>
-                            <span class="stat-value">5</span>
+                            <span class="stat-value" id="totalFaqs">0</span>
                         </div>
                     </div>
                     <div class="status-indicator">
@@ -1037,7 +1037,7 @@
                     <div class="section-header">
                         <div class="header-left">
                             <h3>업로드된 문서</h3>
-                            <span class="document-count" id="documentCount">3개 문서</span>
+                            <span class="document-count" id="documentCount">0개 문서</span>
                         </div>
                         <div class="header-actions">
                             <div class="search-box">
@@ -1097,211 +1097,19 @@
                     <div class="section-header">
                         <div class="header-left">
                             <h3>FAQ 목록</h3>
-                            <span class="document-count">5개 FAQ</span>
+                            <span class="document-count" id="faqCount">0개 FAQ</span>
                         </div>
                         <div class="header-actions">
                             <div class="search-box">
                                 <i class="fas fa-search"></i>
-                                <input type="text" placeholder="FAQ 검색..." id="faqSearch">
+                                <input type="text" placeholder="FAQ 검색..." id="faqSearch" oninput="filterFaqs()">
                             </div>
                         </div>
                     </div>
 
                     <div style="padding: 2rem;">
-                        <div class="faq-list">
-                            <div class="faq-item">
-                                <div class="faq-header" onclick="toggleFAQ(1)">
-                                    <div class="faq-question">
-                                        <i class="fas fa-question-circle" style="color: var(--primary-color);"></i>
-                                        <span>POS 시스템이 갑자기 꺼졌을 때는 어떻게 해야 하나요?</span>
-                                    </div>
-                                    <div class="faq-actions">
-                                        <div class="faq-stats">
-                                            <span><i class="fas fa-eye"></i> 127회</span>
-                                            <span><i class="fas fa-thumbs-up"></i> 94%</span>
-                                        </div>
-                                        <button class="action-btn-small" title="편집" onclick="editFAQ(1); event.stopPropagation();">
-                                            <i class="fas fa-edit"></i>
-                                        </button>
-                                        <button class="action-btn-small delete" title="삭제" onclick="deleteFAQ(1); event.stopPropagation();">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                        <button class="action-btn-small" id="chevron-1">
-                                            <i class="fas fa-chevron-down"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                                <div class="faq-content" id="faq-content-1">
-                                    <div class="faq-answer">
-                                        <p>POS 시스템이 갑자기 꺼진 경우 다음 단계를 따라주세요:</p>
-                                        <ol style="margin-left: 1.5rem; margin-top: 0.5rem;">
-                                            <li>전원 버튼을 5초간 눌러 완전히 종료한 후 다시 켜보세요</li>
-                                            <li>전원 케이블과 연결 상태를 확인하세요</li>
-                                            <li>문제가 지속되면 고객지원팀(1588-1234)으로 연락하세요</li>
-                                        </ol>
-                                    </div>
-                                    <div class="faq-meta">
-                                        <span><strong>생성일:</strong> 2024-06-20</span>
-                                        <span><strong>만족도:</strong> 94%</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="faq-item">
-                                <div class="faq-header" onclick="toggleFAQ(2)">
-                                    <div class="faq-question">
-                                        <i class="fas fa-question-circle" style="color: var(--primary-color);"></i>
-                                        <span>카드 결제가 안될 때 해결방법은 무엇인가요?</span>
-                                    </div>
-                                    <div class="faq-actions">
-                                        <div class="faq-stats">
-                                            <span><i class="fas fa-eye"></i> 98회</span>
-                                            <span><i class="fas fa-thumbs-up"></i> 89%</span>
-                                        </div>
-                                        <button class="action-btn-small" title="편집" onclick="editFAQ(2); event.stopPropagation();">
-                                            <i class="fas fa-edit"></i>
-                                        </button>
-                                        <button class="action-btn-small delete" title="삭제" onclick="deleteFAQ(2); event.stopPropagation();">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                        <button class="action-btn-small" id="chevron-2">
-                                            <i class="fas fa-chevron-down"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                                <div class="faq-content" id="faq-content-2">
-                                    <div class="faq-answer">
-                                        <p>카드 결제 문제 해결 방법:</p>
-                                        <ol style="margin-left: 1.5rem; margin-top: 0.5rem;">
-                                            <li>카드 리더기 연결 상태를 확인하세요</li>
-                                            <li>카드를 다시 삽입하거나 터치해보세요</li>
-                                            <li>다른 카드로 결제를 시도해보세요</li>
-                                            <li>POS 시스템을 재시작해보세요</li>
-                                        </ol>
-                                    </div>
-                                    <div class="faq-meta">
-                                        <span><strong>생성일:</strong> 2024-06-18</span>
-                                        <span><strong>만족도:</strong> 89%</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="faq-item">
-                                <div class="faq-header" onclick="toggleFAQ(3)">
-                                    <div class="faq-question">
-                                        <i class="fas fa-question-circle" style="color: var(--primary-color);"></i>
-                                        <span>키오스크 화면이 멈췄을 때 대처방법을 알려주세요</span>
-                                    </div>
-                                    <div class="faq-actions">
-                                        <div class="faq-stats">
-                                            <span><i class="fas fa-eye"></i> 76회</span>
-                                            <span><i class="fas fa-thumbs-up"></i> 92%</span>
-                                        </div>
-                                        <button class="action-btn-small" title="편집" onclick="editFAQ(3); event.stopPropagation();">
-                                            <i class="fas fa-edit"></i>
-                                        </button>
-                                        <button class="action-btn-small delete" title="삭제" onclick="deleteFAQ(3); event.stopPropagation();">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                        <button class="action-btn-small" id="chevron-3">
-                                            <i class="fas fa-chevron-down"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                                <div class="faq-content" id="faq-content-3">
-                                    <div class="faq-answer">
-                                        <p>키오스크 화면 멈춤 현상 해결:</p>
-                                        <ol style="margin-left: 1.5rem; margin-top: 0.5rem;">
-                                            <li>화면을 10초간 터치하지 마세요</li>
-                                            <li>전원 버튼을 길게 눌러 재시작하세요</li>
-                                            <li>네트워크 연결 상태를 확인하세요</li>
-                                            <li>문제가 반복되면 기술지원팀에 연락하세요</li>
-                                        </ol>
-                                    </div>
-                                    <div class="faq-meta">
-                                        <span><strong>생성일:</strong> 2024-06-15</span>
-                                        <span><strong>만족도:</strong> 92%</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="faq-item">
-                                <div class="faq-header" onclick="toggleFAQ(4)">
-                                    <div class="faq-question">
-                                        <i class="fas fa-question-circle" style="color: var(--primary-color);"></i>
-                                        <span>시스템 초기 설정은 어떻게 하나요?</span>
-                                    </div>
-                                    <div class="faq-actions">
-                                        <div class="faq-stats">
-                                            <span><i class="fas fa-eye"></i> 145회</span>
-                                            <span><i class="fas fa-thumbs-up"></i> 96%</span>
-                                        </div>
-                                        <button class="action-btn-small" title="편집" onclick="editFAQ(4); event.stopPropagation();">
-                                            <i class="fas fa-edit"></i>
-                                        </button>
-                                        <button class="action-btn-small delete" title="삭제" onclick="deleteFAQ(4); event.stopPropagation();">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                        <button class="action-btn-small" id="chevron-4">
-                                            <i class="fas fa-chevron-down"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                                <div class="faq-content" id="faq-content-4">
-                                    <div class="faq-answer">
-                                        <p>시스템 초기 설정 방법:</p>
-                                        <ol style="margin-left: 1.5rem; margin-top: 0.5rem;">
-                                            <li>네트워크 연결 설정을 먼저 완료하세요</li>
-                                            <li>관리자 계정을 생성하세요</li>
-                                            <li>매장 정보를 정확히 입력하세요</li>
-                                            <li>주변기기 연동을 테스트해보세요</li>
-                                        </ol>
-                                    </div>
-                                    <div class="faq-meta">
-                                        <span><strong>생성일:</strong> 2024-06-10</span>
-                                        <span><strong>만족도:</strong> 96%</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="faq-item">
-                                <div class="faq-header" onclick="toggleFAQ(5)">
-                                    <div class="faq-question">
-                                        <i class="fas fa-question-circle" style="color: var(--primary-color);"></i>
-                                        <span>시스템 백업은 어떻게 하나요?</span>
-                                    </div>
-                                    <div class="faq-actions">
-                                        <div class="faq-stats">
-                                            <span><i class="fas fa-eye"></i> 63회</span>
-                                            <span><i class="fas fa-thumbs-up"></i> 88%</span>
-                                        </div>
-                                        <button class="action-btn-small" title="편집" onclick="editFAQ(5); event.stopPropagation();">
-                                            <i class="fas fa-edit"></i>
-                                        </button>
-                                        <button class="action-btn-small delete" title="삭제" onclick="deleteFAQ(5); event.stopPropagation();">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                        <button class="action-btn-small" id="chevron-5">
-                                            <i class="fas fa-chevron-down"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                                <div class="faq-content" id="faq-content-5">
-                                    <div class="faq-answer">
-                                        <p>시스템 백업 절차:</p>
-                                        <ol style="margin-left: 1.5rem; margin-top: 0.5rem;">
-                                            <li>관리자 메뉴에서 '시스템 관리'를 선택하세요</li>
-                                            <li>'데이터 백업' 메뉴를 클릭하세요</li>
-                                            <li>백업할 데이터 범위를 선택하세요</li>
-                                            <li>'백업 시작' 버튼으로 백업을 실행하세요</li>
-                                        </ol>
-                                    </div>
-                                    <div class="faq-meta">
-                                        <span><strong>생성일:</strong> 2024-06-08</span>
-                                        <span><strong>만족도:</strong> 88%</span>
-                                    </div>
-                                </div>
-                            </div>
+                        <div class="faq-list" id="faqList">
+                            <!-- FAQ 항목이 동적으로 렌더링됩니다 -->
                         </div>
                     </div>
                 </div>
@@ -1361,35 +1169,100 @@
     </div>
 
     <script>
-        // 전역 변수
+        const API_BASE_URL = localStorage.getItem('garam_api_base_url') || 'http://localhost:5000';
+
+        async function fetchJSON(url, options = {}) {
+            const opts = { ...options };
+            opts.headers = { ...(options.headers || {}) };
+
+            if (opts.body && !(opts.body instanceof FormData) && typeof opts.body !== 'string') {
+                if (!opts.headers['Content-Type']) {
+                    opts.headers['Content-Type'] = 'application/json';
+                }
+                opts.body = JSON.stringify(opts.body);
+            }
+
+            try {
+                const response = await fetch(url, opts);
+                const text = await response.text();
+
+                if (!response.ok) {
+                    let message = `HTTP ${response.status}`;
+                    if (text) {
+                        try {
+                            const parsed = JSON.parse(text);
+                            if (parsed?.detail) {
+                                message = parsed.detail;
+                            } else if (parsed?.message) {
+                                message = parsed.message;
+                            }
+                        } catch (parseError) {
+                            message = text;
+                        }
+                    }
+                    const error = new Error(message);
+                    error.status = response.status;
+                    throw error;
+                }
+
+                if (!text) {
+                    return null;
+                }
+
+                try {
+                    return JSON.parse(text);
+                } catch (parseError) {
+                    return null;
+                }
+            } catch (error) {
+                if (error instanceof Error) {
+                    throw error;
+                }
+                const fallback = new Error('네트워크 오류가 발생했습니다.');
+                fallback.status = 0;
+                throw fallback;
+            }
+        }
+
+        // 전역 상태
         let currentTab = 'documents';
         let documents = [];
-        let isUploading = false;
         let faqList = [];
+        let isUploading = false;
 
-        // 초기화
-        document.addEventListener('DOMContentLoaded', function() {
-            loadSampleDocuments();
-            updateStatistics();
+        document.addEventListener('DOMContentLoaded', () => {
             setupEventListeners();
+            initializeData();
         });
 
-        // 이벤트 리스너 설정
+        async function initializeData() {
+            try {
+                await loadDocumentsFromServer();
+            } catch (error) {
+                console.error('문서 데이터를 불러오는 중 오류가 발생했습니다.', error);
+                showToast(error.message || '문서 목록을 불러오지 못했습니다.', 'error');
+            }
+
+            try {
+                await loadFaqsFromServer();
+            } catch (error) {
+                console.error('FAQ 데이터를 불러오는 중 오류가 발생했습니다.', error);
+                showToast(error.message || 'FAQ 목록을 불러오지 못했습니다.', 'error');
+            }
+        }
+
         function setupEventListeners() {
             try {
-                // 파일 업로드
                 const fileInput = document.getElementById('documentFileInput');
                 if (fileInput) {
                     fileInput.addEventListener('change', handleFileUpload);
                 }
 
-                // 드래그 앤 드롭
                 const uploadArea = document.getElementById('documentUploadArea');
                 if (uploadArea) {
                     setupDragAndDrop(uploadArea);
                 }
 
-                // 탭 버튼
                 const tabButtons = document.querySelectorAll('.tab-btn');
                 tabButtons.forEach(button => {
                     button.addEventListener('click', function() {
@@ -1397,101 +1270,101 @@
                         switchTab(tabName);
                     });
                 });
+
+                const faqSearch = document.getElementById('faqSearch');
+                if (faqSearch) {
+                    faqSearch.addEventListener('input', filterFaqs);
+                }
             } catch (error) {
-                console.error('Error setting up event listeners:', error);
+                console.error('이벤트 리스너 설정 중 오류가 발생했습니다.', error);
             }
         }
 
-        // 탭 전환
         function switchTab(tabName) {
             currentTab = tabName;
-            
-            // 탭 버튼 활성화
-            document.querySelectorAll('.tab-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            
+
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
             const activeTabBtn = document.querySelector(`[data-tab="${tabName}"]`);
             if (activeTabBtn) {
                 activeTabBtn.classList.add('active');
             }
 
-            // 탭 콘텐트 표시
-            document.querySelectorAll('.tab-content').forEach(content => {
-                content.classList.remove('active');
+            document.querySelectorAll('.tab-content').forEach(section => {
+                section.classList.remove('active');
             });
-            
-            let targetTabId = tabName === 'documents' ? 'documentsTab' : 'faqTab';
-            const targetTab = document.getElementById(targetTabId);
-            if (targetTab) {
-                targetTab.classList.add('active');
+
+            const activeTab = document.getElementById(tabName === 'documents' ? 'documentsTab' : 'faqTab');
+            if (activeTab) {
+                activeTab.classList.add('active');
             }
 
-            // 탭별 데이터 로드
-            if (tabName === 'documents') {
+            if (tabName === 'documents' && documents.length === 0) {
+                loadDocumentsFromServer();
+            }
+            if (tabName === 'faq' && faqList.length === 0) {
+                loadFaqsFromServer();
+            }
+        }
+
+        async function loadDocumentsFromServer() {
+            const tableBody = document.getElementById('documentsTableBody');
+            if (tableBody) {
+                tableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-secondary);">문서를 불러오는 중...</td></tr>';
+            }
+
+            try {
+                const data = await fetchJSON(`${API_BASE_URL}/knowledge?limit=50`);
+                documents = Array.isArray(data) ? data : [];
                 loadDocuments();
+                updateStatistics();
+            } catch (error) {
+                documents = [];
+                if (tableBody) {
+                    tableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 2rem; color: var(--danger-color);">문서를 불러오지 못했습니다.</td></tr>';
+                }
+                updateStatistics();
+                throw error;
             }
         }
 
-        // 샘플 문서 로드
-        function loadSampleDocuments() {
-            documents = [
-                {
-                    id: 1,
-                    name: 'POS 시스템 사용 매뉴얼.pdf',
-                    size: '2.4 MB',
-                    type: 'application/pdf',
-                    uploadDate: '2024-12-20',
-                    status: 'active',
-                    excerpt: 'POS 시스템의 기본 사용법과 문제 해결 방법...'
-                },
-                {
-                    id: 2,
-                    name: '키오스크 운영 가이드.docx',
-                    size: '1.8 MB',
-                    type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                    uploadDate: '2024-12-19',
-                    status: 'active',
-                    excerpt: '키오스크 설치 및 운영에 관한 상세 가이드...'
-                },
-                {
-                    id: 3,
-                    name: '결제 시스템 정책.txt',
-                    size: '0.3 MB',
-                    type: 'text/plain',
-                    uploadDate: '2024-12-18',
-                    status: 'active',
-                    excerpt: '결제 시스템 사용 정책 및 보안 가이드라인...'
-                }
-            ];
-            loadDocuments();
-        }
-
-        // 문서 로드
         function loadDocuments() {
             const tableBody = document.getElementById('documentsTableBody');
             if (!tableBody) return;
 
-            try {
-                const filteredDocuments = getFilteredDocuments();
-                
-                tableBody.innerHTML = filteredDocuments.map(doc => `
+            const filteredDocuments = getFilteredDocuments();
+            if (!filteredDocuments.length) {
+                tableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-secondary);">표시할 문서가 없습니다.</td></tr>';
+                const selectAll = document.getElementById('selectAllDocuments');
+                if (selectAll) selectAll.checked = false;
+                return;
+            }
+
+            tableBody.innerHTML = filteredDocuments.map(doc => {
+                const name = escapeHtml(doc.original_name || doc.name || '이름 없는 문서');
+                const excerpt = escapeHtml(doc.preview || doc.excerpt || '요약 정보가 없습니다.');
+                const sizeLabel = typeof doc.size === 'number' ? formatFileSize(doc.size) : escapeHtml(doc.size || '-');
+                const uploadDate = formatDate(doc.created_at || doc.uploadDate);
+                const status = doc.status || 'processing';
+                const statusClass = status === 'active' ? 'active' : status === 'processing' ? 'processing' : 'error';
+                const statusText = status === 'active' ? '사용중' : status === 'processing' ? '처리중' : '오류';
+
+                return `
                     <tr>
                         <td><input type="checkbox" class="document-checkbox" data-id="${doc.id}"></td>
                         <td>
                             <div class="document-info">
                                 <i class="fas ${getFileIcon(doc.type)} document-icon"></i>
                                 <div class="document-details">
-                                    <span class="document-name">${doc.name}</span>
-                                    <span class="document-excerpt">${doc.excerpt}</span>
+                                    <span class="document-name">${name}</span>
+                                    <span class="document-excerpt">${excerpt}</span>
                                 </div>
                             </div>
                         </td>
-                        <td>${doc.size}</td>
-                        <td>${doc.uploadDate}</td>
+                        <td>${sizeLabel}</td>
+                        <td>${uploadDate}</td>
                         <td>
-                            <span class="status-badge ${doc.status}">
-                                ${doc.status === 'active' ? '사용중' : doc.status === 'processing' ? '처리중' : '오류'}
+                            <span class="status-badge ${statusClass}">
+                                ${statusText}
                             </span>
                         </td>
                         <td>
@@ -1505,50 +1378,54 @@
                             </div>
                         </td>
                     </tr>
-                `).join('');
-            } catch (error) {
-                console.error('Error loading documents:', error);
-                tableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-secondary);">문서를 로드하는 중 오류가 발생했습니다.</td></tr>';
-            }
+                `;
+            }).join('');
+
+            const selectAll = document.getElementById('selectAllDocuments');
+            if (selectAll) selectAll.checked = false;
         }
 
-        // 필터된 문서 가져오기
         function getFilteredDocuments() {
-            let filtered = [...documents];
-
-            const searchTerm = document.getElementById('documentSearch')?.value.toLowerCase() || '';
-            if (searchTerm) {
-                filtered = filtered.filter(doc => 
-                    doc.name.toLowerCase().includes(searchTerm) ||
-                    doc.excerpt.toLowerCase().includes(searchTerm)
-                );
+            const searchTerm = (document.getElementById('documentSearch')?.value || '').trim().toLowerCase();
+            if (!searchTerm) {
+                return [...documents];
             }
 
-            return filtered;
+            return documents.filter(doc => {
+                const name = (doc.original_name || doc.name || '').toLowerCase();
+                const excerpt = (doc.preview || doc.excerpt || '').toLowerCase();
+                return name.includes(searchTerm) || excerpt.includes(searchTerm);
+            });
         }
 
-        // 문서 필터링
         function filterDocuments() {
             loadDocuments();
         }
 
-        // 통계 업데이트
         function updateStatistics() {
             const totalDocs = documents.length;
-            const totalDocumentsEl = document.getElementById('totalDocuments');
-            const documentCountEl = document.getElementById('documentCount');
+            const totalFaqItems = faqList.length;
 
-            if (totalDocumentsEl) totalDocumentsEl.textContent = totalDocs;
-            if (documentCountEl) documentCountEl.textContent = `${totalDocs}개 문서`;
+            const totalDocumentsEl = document.getElementById('totalDocuments');
+            if (totalDocumentsEl) totalDocumentsEl.textContent = totalDocs.toLocaleString();
+
+            const documentCountEl = document.getElementById('documentCount');
+            if (documentCountEl) documentCountEl.textContent = `${totalDocs.toLocaleString()}개 문서`;
+
+            const totalFaqsEl = document.getElementById('totalFaqs');
+            if (totalFaqsEl) totalFaqsEl.textContent = totalFaqItems.toLocaleString();
+
+            const faqCountEl = document.getElementById('faqCount');
+            if (faqCountEl) faqCountEl.textContent = `${totalFaqItems.toLocaleString()}개 FAQ`;
         }
 
-        // 파일 아이콘 가져오기
         function getFileIcon(type) {
             const iconMap = {
                 'application/pdf': 'fa-file-pdf',
                 'application/msword': 'fa-file-word',
                 'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'fa-file-word',
-                'text/plain': 'fa-file-alt',
+                'text/plain': 'fa-file-lines',
+                'text/markdown': 'fa-file-lines',
                 'image/png': 'fa-file-image',
                 'image/jpeg': 'fa-file-image',
                 'image/jpg': 'fa-file-image',
@@ -1557,7 +1434,6 @@
             return iconMap[type] || 'fa-file';
         }
 
-        // 드래그 앤 드롭 설정
         function setupDragAndDrop(area) {
             ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
                 area.addEventListener(eventName, preventDefaults, false);
@@ -1580,62 +1456,64 @@
             e.stopPropagation();
         }
 
-        function handleFileUpload(e) {
-            const files = e.target.files;
+        function handleFileUpload(event) {
+            const files = event.target.files;
             if (files && files.length > 0) {
-                processFiles(files);
+                uploadFiles(files);
             }
         }
 
-        function handleDrop(e) {
-            const dt = e.dataTransfer;
-            const files = dt.files;
+        function handleDrop(event) {
+            const files = event.dataTransfer?.files;
             if (files && files.length > 0) {
-                processFiles(files);
+                uploadFiles(files);
             }
         }
 
-        function processFiles(files) {
-            if (!files || files.length === 0 || isUploading) return;
-            
+        async function uploadFiles(fileList) {
+            if (!fileList || fileList.length === 0 || isUploading) return;
+
             isUploading = true;
             showUploadingState();
-            
-            Array.from(files).forEach((file, index) => {
-                setTimeout(() => {
-                    processIndividualFile(file, index, files.length);
-                }, index * 200);
-            });
-        }
 
-        function processIndividualFile(file, index, totalFiles) {
-            const newDocument = {
-                id: Date.now() + index,
-                name: file.name,
-                size: formatFileSize(file.size),
-                type: file.type,
-                uploadDate: new Date().toISOString().split('T')[0],
-                status: 'active',
-                excerpt: generateExcerpt(file.name)
-            };
-            
-            documents.push(newDocument);
-            
-            // 마지막 파일 처리 완료 시 UI 업데이트
-            if (index === totalFiles - 1) {
-                setTimeout(() => {
-                    hideUploadingState();
-                    loadDocuments();
-                    updateStatistics();
-                    showToast(`${totalFiles}개 파일이 업로드되어 챗봇에서 사용 가능합니다.`, 'success');
-                    
-                    // 파일 입력 초기화
-                    const fileInput = document.getElementById('documentFileInput');
-                    if (fileInput) {
-                        fileInput.value = '';
+            const files = Array.from(fileList);
+            let successCount = 0;
+            const failures = [];
+
+            try {
+                for (const file of files) {
+                    const formData = new FormData();
+                    formData.append('file', file);
+
+                    try {
+                        await fetchJSON(`${API_BASE_URL}/knowledge/upload`, {
+                            method: 'POST',
+                            body: formData
+                        });
+                        successCount += 1;
+                    } catch (error) {
+                        failures.push({ file, error });
                     }
-                }, 1500);
+                }
+            } finally {
+                hideUploadingState();
+                const fileInput = document.getElementById('documentFileInput');
+                if (fileInput) {
+                    fileInput.value = '';
+                }
             }
+
+            if (successCount > 0) {
+                showToast(`${successCount}개 파일이 업로드되었습니다.`, 'success');
+            }
+            if (failures.length > 0) {
+                const errorMessage = failures.length === 1
+                    ? `${failures[0].file.name} 업로드에 실패했습니다: ${failures[0].error?.message || '오류가 발생했습니다.'}`
+                    : `${failures.length}개 파일 업로드 중 오류가 발생했습니다.`;
+                showToast(errorMessage, 'error');
+            }
+
+            await loadDocumentsFromServer();
         }
 
         function showUploadingState() {
@@ -1653,14 +1531,13 @@
             isUploading = false;
         }
 
-        // FAQ 관리 함수들
         function showAddFaqModal() {
             const modal = document.getElementById('faqAddModal');
             if (modal) {
-                // 입력 필드 초기화
-                document.getElementById('faqQuestion').value = '';
-                document.getElementById('faqAnswer').value = '';
-                
+                const questionInput = document.getElementById('faqQuestion');
+                const answerInput = document.getElementById('faqAnswer');
+                if (questionInput) questionInput.value = '';
+                if (answerInput) answerInput.value = '';
                 modal.style.display = 'flex';
             }
         }
@@ -1672,126 +1549,276 @@
             }
         }
 
-        function submitNewFaq() {
-            const question = document.getElementById('faqQuestion').value.trim();
-            const answer = document.getElementById('faqAnswer').value.trim();
-            
+        async function submitNewFaq() {
+            const question = document.getElementById('faqQuestion')?.value.trim();
+            const answer = document.getElementById('faqAnswer')?.value.trim();
+
             if (!question || !answer) {
                 showToast('질문과 답변을 모두 입력해주세요.', 'warning');
                 return;
             }
-            
-            // 새 FAQ ID 생성
-            const newId = faqList.length + 6; // 기존 5개 + 새로 추가
-            
-            // FAQ 목록에 추가 (실제로는 서버에 저장)
-            const newFaq = {
-                id: newId,
-                question: question,
-                answer: answer,
-                views: 0,
-                satisfaction: 0,
-                createdDate: new Date().toISOString().split('T')[0]
-            };
-            
-            faqList.push(newFaq);
-            
-            closeFaqAddModal();
-            showToast('새 FAQ가 추가되었습니다.', 'success');
-        }
 
-        // FAQ 토글
-        function toggleFAQ(id) {
             try {
-                const content = document.getElementById(`faq-content-${id}`);
-                const chevron = document.getElementById(`chevron-${id}`);
-                
-                if (content && chevron) {
-                    const isVisible = content.classList.contains('show');
-                    if (isVisible) {
-                        content.classList.remove('show');
-                        content.style.display = 'none';
-                        const chevronIcon = chevron.querySelector('i');
-                        if (chevronIcon) {
-                            chevronIcon.style.transform = 'rotate(0deg)';
-                        }
-                    } else {
-                        content.classList.add('show');
-                        content.style.display = 'block';
-                        const chevronIcon = chevron.querySelector('i');
-                        if (chevronIcon) {
-                            chevronIcon.style.transform = 'rotate(180deg)';
-                        }
-                    }
-                }
+                await fetchJSON(`${API_BASE_URL}/faqs`, {
+                    method: 'POST',
+                    body: { question, answer }
+                });
+                closeFaqAddModal();
+                showToast('새 FAQ가 추가되었습니다.', 'success');
+                await loadFaqsFromServer();
             } catch (error) {
-                console.error('Error toggling FAQ:', error);
-                showToast('FAQ 토글 중 오류가 발생했습니다.', 'error');
+                console.error('FAQ 추가 중 오류가 발생했습니다.', error);
+                showToast(error.message || 'FAQ 추가에 실패했습니다.', 'error');
             }
         }
 
-        function editFAQ(id) {
-            showToast('FAQ 편집 기능은 개발 중입니다.', 'info');
+        function toggleFAQ(id) {
+            const content = document.getElementById(`faq-content-${id}`);
+            const chevron = document.getElementById(`chevron-${id}`);
+
+            if (!content || !chevron) {
+                return;
+            }
+
+            const isVisible = content.classList.contains('show');
+            if (isVisible) {
+                content.classList.remove('show');
+                content.style.display = 'none';
+                const chevronIcon = chevron.querySelector('i');
+                if (chevronIcon) {
+                    chevronIcon.style.transform = 'rotate(0deg)';
+                }
+            } else {
+                content.classList.add('show');
+                content.style.display = 'block';
+                const chevronIcon = chevron.querySelector('i');
+                if (chevronIcon) {
+                    chevronIcon.style.transform = 'rotate(180deg)';
+                }
+            }
         }
 
-        function deleteFAQ(id) {
-            if (confirm('이 FAQ를 삭제하시겠습니까?')) {
+        async function editFAQ(id) {
+            const faq = faqList.find(item => item.id === id);
+            if (!faq) {
+                showToast('FAQ 정보를 찾을 수 없습니다.', 'error');
+                return;
+            }
+
+            const newQuestion = prompt('질문을 수정하세요.', faq.question);
+            if (newQuestion === null) {
+                return;
+            }
+
+            const newAnswer = prompt('답변을 수정하세요.', faq.answer);
+            if (newAnswer === null) {
+                return;
+            }
+
+            if (!newQuestion.trim() || !newAnswer.trim()) {
+                showToast('질문과 답변을 모두 입력해주세요.', 'warning');
+                return;
+            }
+
+            try {
+                await fetchJSON(`${API_BASE_URL}/faqs/${id}`, {
+                    method: 'PATCH',
+                    body: { question: newQuestion.trim(), answer: newAnswer.trim() }
+                });
+                showToast('FAQ가 수정되었습니다.', 'success');
+                await loadFaqsFromServer();
+            } catch (error) {
+                console.error('FAQ 수정 중 오류가 발생했습니다.', error);
+                showToast(error.message || 'FAQ 수정에 실패했습니다.', 'error');
+            }
+        }
+
+        async function deleteFAQ(id) {
+            if (!confirm('이 FAQ를 삭제하시겠습니까?')) {
+                return;
+            }
+
+            try {
+                await fetchJSON(`${API_BASE_URL}/faqs/${id}`, { method: 'DELETE' });
                 showToast('FAQ가 삭제되었습니다.', 'success');
+                await loadFaqsFromServer();
+            } catch (error) {
+                console.error('FAQ 삭제 중 오류가 발생했습니다.', error);
+                showToast(error.message || 'FAQ 삭제에 실패했습니다.', 'error');
             }
         }
 
-        // 문서 관리 함수들
+        async function loadFaqsFromServer() {
+            const container = document.getElementById('faqList');
+            if (container) {
+                container.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--text-secondary);">FAQ를 불러오는 중...</div>';
+            }
+
+            try {
+                const data = await fetchJSON(`${API_BASE_URL}/faqs?limit=50`);
+                faqList = Array.isArray(data) ? data : [];
+                renderFaqList();
+                updateStatistics();
+            } catch (error) {
+                faqList = [];
+                if (container) {
+                    container.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--danger-color);">FAQ를 불러오지 못했습니다.</div>';
+                }
+                updateStatistics();
+                throw error;
+            }
+        }
+
+        function getFilteredFaqs() {
+            const searchTerm = (document.getElementById('faqSearch')?.value || '').trim().toLowerCase();
+            if (!searchTerm) {
+                return [...faqList];
+            }
+
+            return faqList.filter(faq => {
+                const question = (faq.question || '').toLowerCase();
+                const answer = (faq.answer || '').toLowerCase();
+                return question.includes(searchTerm) || answer.includes(searchTerm);
+            });
+        }
+
+        function filterFaqs() {
+            renderFaqList();
+        }
+
+        function renderFaqList() {
+            const container = document.getElementById('faqList');
+            if (!container) return;
+
+            const items = getFilteredFaqs();
+            if (!items.length) {
+                container.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--text-secondary);">표시할 FAQ가 없습니다.</div>';
+                return;
+            }
+
+            container.innerHTML = items.map(faq => {
+                const question = escapeHtml(faq.question || '');
+                const answer = formatAnswer(faq.answer);
+                const views = formatNumber(faq.views);
+                const satisfaction = formatSatisfaction(faq.satisfaction);
+                const createdAt = formatDate(faq.created_at);
+
+                return `
+                    <div class="faq-item">
+                        <div class="faq-header" onclick="toggleFAQ(${faq.id})">
+                            <div class="faq-question">
+                                <i class="fas fa-question-circle" style="color: var(--primary-color);"></i>
+                                <span>${question}</span>
+                            </div>
+                            <div class="faq-actions">
+                                <div class="faq-stats">
+                                    <span><i class="fas fa-eye"></i> ${views}회</span>
+                                    <span><i class="fas fa-thumbs-up"></i> ${satisfaction}</span>
+                                </div>
+                                <button class="action-btn-small" title="편집" onclick="editFAQ(${faq.id}); event.stopPropagation();">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="action-btn-small delete" title="삭제" onclick="deleteFAQ(${faq.id}); event.stopPropagation();">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                                <button class="action-btn-small" id="chevron-${faq.id}">
+                                    <i class="fas fa-chevron-down"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="faq-content" id="faq-content-${faq.id}">
+                            <div class="faq-answer">${answer}</div>
+                            <div class="faq-meta">
+                                <span><strong>생성일:</strong> ${createdAt}</span>
+                                <span><strong>만족도:</strong> ${satisfaction}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
         function previewDocument(id) {
             showToast('문서 미리보기 기능은 개발 중입니다.', 'info');
         }
 
-        function deleteDocument(id) {
-            if (confirm('이 문서를 삭제하시겠습니까? 챗봇에서도 더 이상 사용할 수 없습니다.')) {
-                documents = documents.filter(doc => doc.id !== id);
-                loadDocuments();
-                updateStatistics();
+        async function deleteDocument(id) {
+            if (!confirm('이 문서를 삭제하시겠습니까? 챗봇에서도 더 이상 사용할 수 없습니다.')) {
+                return;
+            }
+
+            try {
+                await fetchJSON(`${API_BASE_URL}/knowledge/${id}`, { method: 'DELETE' });
                 showToast('문서가 삭제되었습니다.', 'success');
+                await loadDocumentsFromServer();
+            } catch (error) {
+                console.error('문서 삭제 중 오류가 발생했습니다.', error);
+                showToast(error.message || '문서 삭제에 실패했습니다.', 'error');
             }
         }
 
         function toggleAllDocuments(checked) {
-            const checkboxes = document.querySelectorAll('.document-checkbox');
-            checkboxes.forEach(checkbox => {
+            document.querySelectorAll('.document-checkbox').forEach(checkbox => {
                 checkbox.checked = checked;
             });
         }
 
-        function bulkDeleteDocuments() {
+        async function bulkDeleteDocuments() {
             const selectedIds = [];
             document.querySelectorAll('.document-checkbox:checked').forEach(cb => {
-                selectedIds.push(parseInt(cb.dataset.id));
+                const id = Number(cb.dataset.id);
+                if (!Number.isNaN(id)) {
+                    selectedIds.push(id);
+                }
             });
-            
+
             if (selectedIds.length === 0) {
                 showToast('삭제할 문서를 선택해주세요.', 'warning');
                 return;
             }
 
-            if (confirm(`선택한 ${selectedIds.length}개 문서를 삭제하시겠습니까?`)) {
-                documents = documents.filter(doc => !selectedIds.includes(doc.id));
-                loadDocuments();
-                updateStatistics();
-                showToast(`${selectedIds.length}개 문서가 삭제되었습니다.`, 'success');
+            if (!confirm(`선택한 ${selectedIds.length}개 문서를 삭제하시겠습니까?`)) {
+                return;
             }
+
+            let successCount = 0;
+            let failureCount = 0;
+
+            for (const id of selectedIds) {
+                try {
+                    await fetchJSON(`${API_BASE_URL}/knowledge/${id}`, { method: 'DELETE' });
+                    successCount += 1;
+                } catch (error) {
+                    failureCount += 1;
+                }
+            }
+
+            if (successCount > 0) {
+                showToast(`${successCount}개 문서가 삭제되었습니다.`, 'success');
+            }
+            if (failureCount > 0) {
+                showToast(`${failureCount}개 문서 삭제에 실패했습니다.`, 'error');
+            }
+
+            const selectAll = document.getElementById('selectAllDocuments');
+            if (selectAll) {
+                selectAll.checked = false;
+            }
+
+            await loadDocumentsFromServer();
         }
 
-        // 토스트 알림
         function showToast(message, type = 'info') {
             const toast = document.createElement('div');
             toast.className = `toast ${type}`;
             toast.textContent = message;
-            
+
             document.body.appendChild(toast);
-            
+
             setTimeout(() => {
                 toast.classList.add('show');
             }, 100);
-            
+
             setTimeout(() => {
                 toast.classList.remove('show');
                 setTimeout(() => {
@@ -1802,17 +1829,64 @@
             }, 3000);
         }
 
-        // 유틸리티 함수들
         function formatFileSize(bytes) {
+            if (typeof bytes !== 'number' || Number.isNaN(bytes)) {
+                return '-';
+            }
             if (bytes === 0) return '0 B';
             const k = 1024;
-            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
             const i = Math.floor(Math.log(bytes) / Math.log(k));
-            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+            return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
         }
 
-        function generateExcerpt(fileName) {
-            return `${fileName.split('.')[0]}에 대한 문서입니다...`;
+        function formatDate(value) {
+            if (!value) {
+                return '-';
+            }
+            try {
+                const date = new Date(value);
+                if (Number.isNaN(date.getTime())) {
+                    return '-';
+                }
+                return date.toISOString().split('T')[0];
+            } catch (error) {
+                return '-';
+            }
+        }
+
+        function escapeHtml(value) {
+            if (typeof value !== 'string') {
+                return '';
+            }
+            return value
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function formatAnswer(answer) {
+            if (typeof answer !== 'string' || !answer.trim()) {
+                return '<p>답변 내용이 없습니다.</p>';
+            }
+            const escaped = escapeHtml(answer.trim());
+            return escaped.replace(/\n/g, '<br>');
+        }
+
+        function formatNumber(value) {
+            if (typeof value !== 'number' || Number.isNaN(value)) {
+                return '0';
+            }
+            return value.toLocaleString();
+        }
+
+        function formatSatisfaction(value) {
+            if (typeof value !== 'number' || Number.isNaN(value)) {
+                return '-';
+            }
+            return `${Math.round(value)}%`;
         }
     </script>
 </body>
