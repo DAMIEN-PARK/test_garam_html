@@ -5,7 +5,8 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from crud import model as crud_model
 from crud.knowledge import search_chunks_by_vector      # vector search 하는 곳
-from langchain_service.prompt.style import build_system_prompt, llm_params
+from langchain_service.prompt.style import build_system_prompt
+from langchain_service.llm.setup import llm_kwargs_for_model
 
 
 def make_qa_chain(db, get_llm, text_to_vector, *, knowledge_id=None, top_k=5):
@@ -38,7 +39,13 @@ def make_qa_chain(db, get_llm, text_to_vector, *, knowledge_id=None, top_k=5):
         ("human", "{question}")
     ])
 
-    llm = get_llm(**llm_params(m.fast_response_mode))
+    llm = get_llm(
+        **llm_kwargs_for_model(
+            fast_response_mode=m.fast_response_mode,
+            model_name=m.name,
+            provider_name=m.provider_name,
+        )
+    )
 
     return (
         RunnableMap({
