@@ -1,0 +1,1244 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>가람포스텍 RAG 상담 센터</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-1ycn6IcaQQ40/MKBW2W4Rhis/DbILU74C1vSrLJxCq57jzv4N3GdP0pG5dQ3V7R3HgNbwe+58YF0UHvP7jv0A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+    <style>
+        :root {
+            --primary: #1e60e1;
+            --primary-dark: #1546a5;
+            --secondary: #f1f5f9;
+            --surface: #ffffff;
+            --text-primary: #1f2933;
+            --text-secondary: #64748b;
+            --border: #e2e8f0;
+            --danger: #dc2626;
+            --success: #16a34a;
+            --shadow-sm: 0 8px 24px rgba(15, 23, 42, 0.08);
+            --transition: all 0.2s ease-in-out;
+            --sidebar-width: 320px;
+            --context-width: 320px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            height: 100%;
+            margin: 0;
+            font-family: 'Noto Sans KR', sans-serif;
+            background: #eef2f7;
+            color: var(--text-primary);
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .app-shell {
+            flex: 1;
+            display: grid;
+            grid-template-columns: var(--sidebar-width) minmax(0, 1fr) var(--context-width);
+            grid-template-rows: 100%;
+            min-height: 0;
+        }
+
+        aside,
+        main {
+            min-height: 0;
+            overflow: hidden;
+            background: var(--surface);
+        }
+
+        .session-sidebar {
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .session-sidebar header {
+            padding: 20px 24px 12px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .session-sidebar h1 {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .session-sidebar p {
+            margin: 6px 0 0;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .session-controls {
+            padding: 0 16px 16px;
+            display: grid;
+            gap: 12px;
+        }
+
+        .session-controls input[type="text"] {
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+            transition: var(--transition);
+        }
+
+        .session-controls input[type="text"]:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(30, 96, 225, 0.2);
+        }
+
+        .session-controls button {
+            padding: 10px 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            background: var(--primary);
+            color: white;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .session-controls button:hover {
+            background: var(--primary-dark);
+        }
+
+        .session-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0 12px 12px;
+        }
+
+        .session-item {
+            border-radius: 12px;
+            padding: 14px 16px;
+            margin: 6px 0;
+            background: transparent;
+            border: 1px solid transparent;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .session-item:hover {
+            background: #f8fafc;
+            border-color: var(--border);
+        }
+
+        .session-item.active {
+            background: rgba(30, 96, 225, 0.08);
+            border-color: rgba(30, 96, 225, 0.35);
+        }
+
+        .session-item .title {
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+
+        .session-item .meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .session-item .status {
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+        }
+
+        .session-item .status.open {
+            background: rgba(30, 96, 225, 0.12);
+            color: var(--primary-dark);
+        }
+
+        .session-item .status.resolved {
+            background: rgba(22, 163, 74, 0.12);
+            color: var(--success);
+        }
+
+        .chat-main {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .chat-header {
+            padding: 20px 28px 18px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .chat-header .info h2 {
+            margin: 0 0 4px;
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .chat-header .info p {
+            margin: 0;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .chat-header .actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .chat-header button,
+        .chat-header select {
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: white;
+            color: var(--text-primary);
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .chat-header button.primary {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+
+        .chat-header button.primary:hover {
+            background: var(--primary-dark);
+        }
+
+        .chat-log-wrapper {
+            flex: 1;
+            overflow-y: auto;
+            padding: 28px;
+            background: #f8fafc;
+        }
+
+        .chat-log {
+            max-width: 780px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .chat-message {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+
+        .chat-message.user {
+            flex-direction: row-reverse;
+        }
+
+        .chat-message .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            color: white;
+            flex-shrink: 0;
+        }
+
+        .chat-message.user .avatar {
+            background: var(--primary);
+        }
+
+        .chat-message.assistant .avatar {
+            background: #16a34a;
+        }
+
+        .chat-message.system .avatar {
+            background: #0f172a;
+        }
+
+        .chat-message .bubble {
+            max-width: 70%;
+            padding: 14px 18px;
+            border-radius: 16px;
+            box-shadow: var(--shadow-sm);
+            background: white;
+            font-size: 14px;
+            line-height: 1.6;
+            position: relative;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .chat-message.user .bubble {
+            background: var(--primary);
+            color: white;
+        }
+
+        .chat-message .meta {
+            margin-top: 8px;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .chat-message .sources {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid var(--border);
+        }
+
+        .chat-message .sources h4 {
+            margin: 0 0 6px;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+        }
+
+        .chat-message .sources ul {
+            margin: 0;
+            padding-left: 16px;
+            color: var(--text-secondary);
+            font-size: 12px;
+        }
+
+        .typing-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .typing-indicator span {
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--text-secondary);
+            animation: blink 1s infinite ease-in-out;
+        }
+
+        .typing-indicator span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-indicator span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes blink {
+            0%,
+            80%,
+            100% {
+                opacity: 0.2;
+                transform: translateY(0);
+            }
+
+            40% {
+                opacity: 1;
+                transform: translateY(-2px);
+            }
+        }
+
+        .composer {
+            padding: 22px 28px;
+            border-top: 1px solid var(--border);
+            background: white;
+        }
+
+        .composer-inner {
+            display: flex;
+            align-items: flex-end;
+            gap: 16px;
+        }
+
+        .composer textarea {
+            flex: 1;
+            min-height: 60px;
+            max-height: 200px;
+            padding: 12px 14px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            font-size: 14px;
+            resize: vertical;
+            transition: var(--transition);
+        }
+
+        .composer textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(30, 96, 225, 0.2);
+        }
+
+        .composer button {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 12px;
+            background: var(--primary);
+            color: white;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .composer button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .composer button:not(:disabled):hover {
+            background: var(--primary-dark);
+        }
+
+        .context-panel {
+            border-left: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .context-panel header {
+            padding: 20px 24px 12px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .context-panel h3 {
+            margin: 0;
+            font-size: 17px;
+            font-weight: 600;
+        }
+
+        .context-panel .section {
+            padding: 16px 24px;
+            border-bottom: 1px solid var(--border);
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .context-panel .section:last-child {
+            border-bottom: none;
+        }
+
+        .context-panel .empty {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .source-card {
+            background: rgba(15, 23, 42, 0.04);
+            border-radius: 12px;
+            padding: 12px 14px;
+            margin-bottom: 10px;
+        }
+
+        .source-card:last-child {
+            margin-bottom: 0;
+        }
+
+        .source-card .source-title {
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: var(--primary-dark);
+        }
+
+        .source-card .source-meta {
+            font-size: 12px;
+            color: var(--text-secondary);
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .source-card a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .source-card a:hover {
+            text-decoration: underline;
+        }
+
+        .session-meta {
+            font-size: 12px;
+            color: var(--text-secondary);
+            display: grid;
+            gap: 6px;
+        }
+
+        .toast-container {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 9999;
+        }
+
+        .toast {
+            min-width: 260px;
+            padding: 14px 18px;
+            border-radius: 12px;
+            color: white;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: var(--shadow-sm);
+            opacity: 0;
+            transform: translateY(-10px);
+            animation: toast-in 0.2s forwards ease-out;
+        }
+
+        .toast.success {
+            background: var(--success);
+        }
+
+        .toast.error {
+            background: var(--danger);
+        }
+
+        .toast.info {
+            background: var(--primary);
+        }
+
+        @keyframes toast-in {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 1280px) {
+            :root {
+                --context-width: 260px;
+            }
+
+            .chat-log {
+                max-width: 640px;
+            }
+        }
+
+        @media (max-width: 1024px) {
+            :root {
+                --sidebar-width: 280px;
+            }
+
+            .app-shell {
+                grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+            }
+
+            .context-panel {
+                display: none;
+            }
+        }
+
+        @media (max-width: 768px) {
+            body {
+                background: white;
+            }
+
+            .app-shell {
+                display: flex;
+                flex-direction: column;
+            }
+
+            .session-sidebar {
+                position: sticky;
+                top: 0;
+                z-index: 100;
+            }
+
+            .chat-log-wrapper {
+                padding: 20px 16px;
+            }
+
+            .chat-message .bubble {
+                max-width: 85%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app-shell">
+        <aside class="session-sidebar">
+            <header>
+                <h1>대화 세션</h1>
+                <p>LangChain RAG 파이프라인과 연결된 상담 세션을 관리하세요.</p>
+            </header>
+            <div class="session-controls">
+                <input type="text" id="sessionSearch" placeholder="세션 검색" autocomplete="off">
+                <button id="newSessionButton"><i class="fa-solid fa-plus"></i>&nbsp; 새 채팅 시작</button>
+            </div>
+            <div class="session-list" id="sessionList">
+                <div class="empty">세션을 불러오는 중입니다...</div>
+            </div>
+        </aside>
+
+        <main class="chat-main">
+            <div class="chat-header">
+                <div class="info">
+                    <h2 id="chatTitle">세션을 선택하세요</h2>
+                    <p id="chatSubtitle">LangChain에 연결된 OpenAI 모델이 지식베이스 기반 답변을 제공합니다.</p>
+                </div>
+                <div class="actions">
+                    <button id="refreshButton" title="목록 새로고침"><i class="fa-solid fa-rotate"></i></button>
+                    <button id="endSessionButton" class="primary" disabled>세션 종료</button>
+                </div>
+            </div>
+
+            <div class="chat-log-wrapper">
+                <div class="chat-log" id="chatLog">
+                    <div class="empty" id="chatEmptyState">왼쪽에서 대화를 선택하거나 새 세션을 생성하세요.</div>
+                </div>
+            </div>
+
+            <form class="composer" id="messageForm">
+                <div class="composer-inner">
+                    <textarea id="messageInput" placeholder="질문을 입력하고 Enter로 전송하세요." disabled></textarea>
+                    <button type="submit" id="sendButton" disabled>
+                        <i class="fa-solid fa-paper-plane"></i>
+                    </button>
+                </div>
+            </form>
+        </main>
+
+        <aside class="context-panel">
+            <header>
+                <h3>지식베이스 컨텍스트</h3>
+            </header>
+            <div class="section" id="sourceSection">
+                <div class="empty">가장 최근 답변에서 활용한 문서가 여기에 표시됩니다.</div>
+            </div>
+            <div class="section">
+                <h4>세션 정보</h4>
+                <div class="session-meta" id="sessionMeta">
+                    <span>선택된 세션이 없습니다.</span>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script>
+        const API_BASE_URL = localStorage.getItem('garam_api_base_url') || 'http://localhost:5000';
+        const SESSION_STORAGE_KEY = 'garampos_chat_selected_session';
+        const SEARCH_DEBOUNCE = 200;
+
+        const state = {
+            sessions: [],
+            filteredSessions: [],
+            messages: [],
+            currentSessionId: null,
+            typingTimer: null,
+            isSending: false,
+        };
+
+        const elements = {
+            sessionList: document.getElementById('sessionList'),
+            sessionSearch: document.getElementById('sessionSearch'),
+            newSessionButton: document.getElementById('newSessionButton'),
+            refreshButton: document.getElementById('refreshButton'),
+            endSessionButton: document.getElementById('endSessionButton'),
+            chatTitle: document.getElementById('chatTitle'),
+            chatSubtitle: document.getElementById('chatSubtitle'),
+            chatLog: document.getElementById('chatLog'),
+            chatEmptyState: document.getElementById('chatEmptyState'),
+            messageForm: document.getElementById('messageForm'),
+            messageInput: document.getElementById('messageInput'),
+            sendButton: document.getElementById('sendButton'),
+            sourceSection: document.getElementById('sourceSection'),
+            sessionMeta: document.getElementById('sessionMeta'),
+            toastContainer: document.getElementById('toastContainer'),
+        };
+
+        function formatDate(isoString) {
+            if (!isoString) return '-';
+            const date = new Date(isoString);
+            if (Number.isNaN(date.getTime())) return '-';
+            return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+        }
+
+        async function fetchJSON(url, options = {}) {
+            const opts = { ...options };
+            opts.headers = {
+                ...(options.headers || {}),
+            };
+            if (opts.body && typeof opts.body !== 'string') {
+                if (!opts.headers['Content-Type']) {
+                    opts.headers['Content-Type'] = 'application/json';
+                }
+                opts.body = JSON.stringify(opts.body);
+            }
+
+            try {
+                const response = await fetch(url, opts);
+                const text = await response.text();
+                if (!response.ok) {
+                    let message = `HTTP ${response.status}`;
+                    if (text) {
+                        try {
+                            const parsed = JSON.parse(text);
+                            if (parsed?.detail) {
+                                message = parsed.detail;
+                            } else if (parsed?.message) {
+                                message = parsed.message;
+                            }
+                        } catch (err) {
+                            message = text;
+                        }
+                    }
+                    const error = new Error(message);
+                    error.status = response.status;
+                    error.body = text;
+                    throw error;
+                }
+
+                if (!text) {
+                    return null;
+                }
+
+                try {
+                    return JSON.parse(text);
+                } catch (err) {
+                    return null;
+                }
+            } catch (error) {
+                if (error instanceof Error) {
+                    throw error;
+                }
+                const fallback = new Error('네트워크 오류가 발생했습니다.');
+                fallback.status = 0;
+                throw fallback;
+            }
+        }
+
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `<i class="fa-solid ${type === 'success' ? 'fa-circle-check' : type === 'error' ? 'fa-circle-exclamation' : 'fa-circle-info'}"></i><span>${message}</span>`;
+            elements.toastContainer.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(-10px)';
+                setTimeout(() => toast.remove(), 200);
+            }, 3200);
+        }
+
+        function renderSessionList() {
+            const sessions = state.filteredSessions.length ? state.filteredSessions : state.sessions;
+            if (!sessions.length) {
+                elements.sessionList.innerHTML = '<div class="empty">생성된 세션이 없습니다. 새 채팅을 시작해보세요.</div>';
+                return;
+            }
+
+            const fragment = document.createDocumentFragment();
+            sessions.forEach((session) => {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'session-item' + (session.id === state.currentSessionId ? ' active' : '');
+
+                const title = document.createElement('div');
+                title.className = 'title';
+                title.textContent = session.title || '제목 없음';
+
+                const meta = document.createElement('div');
+                meta.className = 'meta';
+                const createdAt = document.createElement('span');
+                createdAt.textContent = formatDate(session.created_at);
+                const status = document.createElement('span');
+                status.className = 'status ' + (session.resolved ? 'resolved' : 'open');
+                status.textContent = session.resolved ? 'Resolved' : 'Open';
+
+                meta.appendChild(createdAt);
+                meta.appendChild(status);
+
+                button.appendChild(title);
+                button.appendChild(meta);
+                button.addEventListener('click', () => selectSession(session.id));
+                fragment.appendChild(button);
+            });
+            elements.sessionList.innerHTML = '';
+            elements.sessionList.appendChild(fragment);
+        }
+
+        function renderMessages() {
+            if (!state.messages.length) {
+                elements.chatLog.innerHTML = '<div class="empty">아직 메시지가 없습니다. 질문을 입력해보세요.</div>';
+                return;
+            }
+
+            const fragment = document.createDocumentFragment();
+            state.messages.forEach((msg) => {
+                const item = document.createElement('div');
+                item.className = `chat-message ${msg.role}`;
+
+                const avatar = document.createElement('div');
+                avatar.className = 'avatar';
+                const iconEl = document.createElement('i');
+                iconEl.className = 'fa-solid ' + (msg.role === 'assistant' ? 'fa-robot' : msg.role === 'user' ? 'fa-user' : 'fa-circle-info');
+                avatar.appendChild(iconEl);
+
+                const body = document.createElement('div');
+                const bubble = document.createElement('div');
+                bubble.className = 'bubble';
+                if (msg.isTyping) {
+                    bubble.innerHTML = '<div class="typing-indicator"><span></span><span></span><span></span></div>';
+                } else {
+                    bubble.textContent = msg.content || '';
+                }
+
+                const meta = document.createElement('div');
+                meta.className = 'meta';
+                const roleLabel = msg.role === 'assistant' ? 'Assistant' : msg.role === 'user' ? 'User' : 'System';
+                meta.textContent = `${roleLabel} · ${formatDate(msg.created_at)}`;
+
+                body.appendChild(bubble);
+                body.appendChild(meta);
+
+                item.appendChild(avatar);
+                item.appendChild(body);
+
+                if (!msg.isTyping && msg.role === 'assistant' && msg.extra_data?.sources?.length) {
+                    const sourcesDiv = document.createElement('div');
+                    sourcesDiv.className = 'sources';
+                    const heading = document.createElement('h4');
+                    heading.textContent = '참고 문서';
+                    const list = document.createElement('ul');
+                    msg.extra_data.sources.forEach((source) => {
+                        const itemEl = document.createElement('li');
+                        const title = source.title || source.document_title || '제목 없음';
+                        const scoreText = typeof source.score === 'number' ? ` (score: ${source.score.toFixed(3)})` : '';
+                        if (source.url) {
+                            const link = document.createElement('a');
+                            link.href = source.url;
+                            link.target = '_blank';
+                            link.rel = 'noopener noreferrer';
+                            link.textContent = title;
+                            itemEl.appendChild(link);
+                            if (scoreText) {
+                                itemEl.appendChild(document.createTextNode(scoreText));
+                            }
+                        } else {
+                            itemEl.textContent = `${title}${scoreText}`;
+                        }
+                        list.appendChild(itemEl);
+                    });
+                    sourcesDiv.appendChild(heading);
+                    sourcesDiv.appendChild(list);
+                    bubble.appendChild(sourcesDiv);
+                }
+
+                fragment.appendChild(item);
+            });
+
+            elements.chatLog.innerHTML = '';
+            elements.chatLog.appendChild(fragment);
+            const scrollContainer = elements.chatLog.parentElement;
+            if (scrollContainer) {
+                scrollContainer.scrollTop = scrollContainer.scrollHeight;
+            }
+        }
+
+        function renderSourcesFromMessage(message) {
+            if (!message || !message.extra_data?.sources?.length) {
+                elements.sourceSection.innerHTML = '<div class="empty">참고한 문서 정보가 없습니다.</div>';
+                return;
+            }
+
+            const fragment = document.createDocumentFragment();
+            message.extra_data.sources.forEach((source, index) => {
+                const card = document.createElement('div');
+                card.className = 'source-card';
+
+                const titleEl = document.createElement('div');
+                titleEl.className = 'source-title';
+                titleEl.textContent = source.title || source.document_title || `자료 ${index + 1}`;
+
+                const meta = document.createElement('div');
+                meta.className = 'source-meta';
+                if (source.chunk_preview) {
+                    const preview = document.createElement('span');
+                    preview.textContent = source.chunk_preview;
+                    meta.appendChild(preview);
+                }
+                if (typeof source.score === 'number') {
+                    const score = document.createElement('span');
+                    score.textContent = `관련도: ${source.score.toFixed(3)}`;
+                    meta.appendChild(score);
+                }
+                if (source.url) {
+                    const link = document.createElement('a');
+                    link.href = source.url;
+                    link.target = '_blank';
+                    link.rel = 'noopener noreferrer';
+                    link.textContent = '원문 보기';
+                    meta.appendChild(link);
+                }
+
+                card.appendChild(titleEl);
+                card.appendChild(meta);
+                fragment.appendChild(card);
+            });
+            elements.sourceSection.innerHTML = '';
+            elements.sourceSection.appendChild(fragment);
+        }
+
+        function renderSessionMeta(session) {
+            if (!session) {
+                elements.sessionMeta.innerHTML = '<span>선택된 세션이 없습니다.</span>';
+                return;
+            }
+
+            elements.sessionMeta.innerHTML = '';
+            const fragment = document.createDocumentFragment();
+
+            const fields = [
+                ['세션 ID', session.id],
+                ['생성일', formatDate(session.created_at)],
+                ['종료일', session.ended_at ? formatDate(session.ended_at) : '-'],
+                ['상태', session.resolved ? 'Resolved' : 'Open'],
+            ];
+
+            fields.forEach(([label, value]) => {
+                const row = document.createElement('span');
+                const strong = document.createElement('strong');
+                strong.textContent = `${label}:`;
+                row.appendChild(strong);
+                row.appendChild(document.createTextNode(` ${value}`));
+                fragment.appendChild(row);
+            });
+
+            if (session.preview) {
+                const previewRow = document.createElement('span');
+                const strong = document.createElement('strong');
+                strong.textContent = '미리보기:';
+                previewRow.appendChild(strong);
+                previewRow.appendChild(document.createTextNode(` ${session.preview}`));
+                fragment.appendChild(previewRow);
+            }
+
+            elements.sessionMeta.appendChild(fragment);
+        }
+
+        function applySearchFilter(keyword) {
+            const normalized = keyword.trim().toLowerCase();
+            if (!normalized) {
+                state.filteredSessions = [];
+                renderSessionList();
+                return;
+            }
+
+            state.filteredSessions = state.sessions.filter((session) => {
+                const title = session.title?.toLowerCase() || '';
+                return title.includes(normalized) || String(session.id).includes(normalized);
+            });
+            renderSessionList();
+        }
+
+        let searchTimer = null;
+        elements.sessionSearch.addEventListener('input', (event) => {
+            const value = event.target.value;
+            if (searchTimer) {
+                clearTimeout(searchTimer);
+            }
+            searchTimer = setTimeout(() => applySearchFilter(value), SEARCH_DEBOUNCE);
+        });
+
+        elements.newSessionButton.addEventListener('click', async () => {
+            const title = prompt('새 세션 제목을 입력하세요.', '새 상담 세션');
+            if (title === null) {
+                return;
+            }
+            const payload = {
+                title: title.trim() || '새 상담 세션',
+                preview: '',
+                resolved: false,
+            };
+            try {
+                const session = await fetchJSON(`${API_BASE_URL}/chat/sessions`, {
+                    method: 'POST',
+                    body: payload,
+                });
+                showToast('새 세션이 생성되었습니다.', 'success');
+                await loadSessions(session.id);
+            } catch (error) {
+                console.error(error);
+                showToast(error.message || '세션 생성 중 오류가 발생했습니다.', 'error');
+            }
+        });
+
+        elements.refreshButton.addEventListener('click', () => loadSessions(state.currentSessionId));
+
+        elements.endSessionButton.addEventListener('click', async () => {
+            if (!state.currentSessionId) return;
+            const confirmed = confirm('현재 세션을 종료하고 해결됨 상태로 표시할까요?');
+            if (!confirmed) return;
+            try {
+                await fetchJSON(`${API_BASE_URL}/chat/sessions/${state.currentSessionId}/end`, {
+                    method: 'POST',
+                    body: { resolved: true },
+                });
+                showToast('세션이 종료되었습니다.', 'success');
+                await loadSessions(state.currentSessionId);
+            } catch (error) {
+                console.error(error);
+                showToast(error.message || '세션 종료에 실패했습니다.', 'error');
+            }
+        });
+
+        elements.messageForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const question = elements.messageInput.value.trim();
+            if (!question || !state.currentSessionId || state.isSending) {
+                return;
+            }
+
+            state.isSending = true;
+            elements.sendButton.disabled = true;
+            elements.messageInput.value = '';
+            elements.messageInput.disabled = true;
+
+            const nowISO = new Date().toISOString();
+            const userMessage = {
+                id: `local-${Date.now()}`,
+                role: 'user',
+                content: question,
+                created_at: nowISO,
+            };
+            state.messages.push(userMessage);
+            renderMessages();
+
+            try {
+                await fetchJSON(`${API_BASE_URL}/chat/sessions/${state.currentSessionId}/messages`, {
+                    method: 'POST',
+                    body: {
+                        session_id: state.currentSessionId,
+                        role: 'user',
+                        content: question,
+                    },
+                });
+            } catch (error) {
+                console.warn('사용자 메시지 저장 실패:', error);
+            }
+
+            const typingMessage = {
+                id: 'typing-indicator',
+                role: 'assistant',
+                content: '',
+                created_at: new Date().toISOString(),
+                isTyping: true,
+            };
+            state.messages.push(typingMessage);
+            renderMessages();
+
+            try {
+                const ragResult = await askLLM(question);
+                removeTypingIndicator();
+
+                const answerText = ragResult?.answer || '죄송합니다. 현재 답변을 가져오지 못했습니다.';
+                const assistantMessage = {
+                    id: ragResult?.message_id || `local-assistant-${Date.now()}`,
+                    role: 'assistant',
+                    content: answerText,
+                    created_at: new Date().toISOString(),
+                    extra_data: { sources: ragResult?.sources || ragResult?.documents || [] },
+                };
+
+                state.messages.push(assistantMessage);
+                renderMessages();
+                renderSourcesFromMessage(assistantMessage);
+
+                try {
+                    await fetchJSON(`${API_BASE_URL}/chat/sessions/${state.currentSessionId}/messages`, {
+                        method: 'POST',
+                        body: {
+                            session_id: state.currentSessionId,
+                            role: 'assistant',
+                            content: answerText,
+                            extra_data: assistantMessage.extra_data,
+                        },
+                    });
+                } catch (error) {
+                    console.warn('assistant 메시지 저장 실패:', error);
+                }
+            } catch (error) {
+                console.error(error);
+                removeTypingIndicator();
+                const failureMessage = {
+                    id: `error-${Date.now()}`,
+                    role: 'assistant',
+                    content: '죄송합니다. LLM 응답을 가져오는 중 오류가 발생했습니다.',
+                    created_at: new Date().toISOString(),
+                };
+                state.messages.push(failureMessage);
+                renderMessages();
+                showToast(error.message || 'LLM 응답 요청에 실패했습니다.', 'error');
+            } finally {
+                state.isSending = false;
+                const session = state.sessions.find((s) => s.id === state.currentSessionId);
+                if (session?.resolved) {
+                    elements.messageInput.disabled = true;
+                    elements.sendButton.disabled = true;
+                } else {
+                    elements.messageInput.disabled = false;
+                    elements.sendButton.disabled = false;
+                    elements.messageInput.focus();
+                }
+            }
+        });
+
+        elements.messageInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                elements.messageForm.dispatchEvent(new Event('submit', { cancelable: true }));
+            }
+        });
+
+        async function askLLM(question) {
+            const sessionId = state.currentSessionId;
+            const candidates = [
+                `${API_BASE_URL}/chat/sessions/${sessionId}/qa`,
+                `${API_BASE_URL}/qa/query`,
+                `${API_BASE_URL}/qa`,
+            ];
+            let lastError = null;
+            for (const endpoint of candidates) {
+                try {
+                    const result = await fetchJSON(endpoint, {
+                        method: 'POST',
+                        body: {
+                            session_id: sessionId,
+                            question,
+                        },
+                    });
+                    if (result) {
+                        return result;
+                    }
+                } catch (error) {
+                    lastError = error;
+                    if (error.status && error.status !== 404 && error.status !== 405 && error.status !== 500) {
+                        break;
+                    }
+                }
+            }
+            throw lastError || new Error('LLM 응답을 받을 수 없습니다.');
+        }
+
+        function removeTypingIndicator() {
+            const idx = state.messages.findIndex((msg) => msg.isTyping);
+            if (idx >= 0) {
+                state.messages.splice(idx, 1);
+                renderMessages();
+            }
+        }
+
+        async function selectSession(sessionId) {
+            if (!sessionId) return;
+            if (sessionId === state.currentSessionId) return;
+
+            state.currentSessionId = sessionId;
+            localStorage.setItem(SESSION_STORAGE_KEY, String(sessionId));
+            const session = state.sessions.find((s) => s.id === sessionId);
+            elements.chatTitle.textContent = session?.title || `세션 ${sessionId}`;
+            elements.chatSubtitle.textContent = session?.resolved
+                ? '종료된 세션입니다. 추가 질문을 하려면 새 채팅을 생성하세요.'
+                : '지식베이스 기반 답변을 얻으려면 질문을 입력하세요.';
+            elements.endSessionButton.disabled = !!session?.resolved;
+            elements.messageInput.disabled = !!session?.resolved;
+            elements.sendButton.disabled = !!session?.resolved;
+            renderSessionMeta(session);
+            renderSessionList();
+
+            await loadMessages(sessionId);
+        }
+
+        async function loadSessions(selectSessionId = null) {
+            try {
+                const sessions = await fetchJSON(`${API_BASE_URL}/chat/sessions?limit=50`);
+                state.sessions = Array.isArray(sessions) ? sessions : [];
+                state.sessions.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+                state.filteredSessions = [];
+                renderSessionList();
+
+                const targetSessionId = selectSessionId || Number(localStorage.getItem(SESSION_STORAGE_KEY));
+                if (targetSessionId && state.sessions.some((s) => s.id === Number(targetSessionId))) {
+                    await selectSession(Number(targetSessionId));
+                } else if (state.sessions.length) {
+                    await selectSession(state.sessions[0].id);
+                } else {
+                    state.currentSessionId = null;
+                    elements.chatTitle.textContent = '세션을 선택하세요';
+                    elements.chatSubtitle.textContent = 'LangChain에 연결된 OpenAI 모델이 지식베이스 기반 답변을 제공합니다.';
+                    elements.messageInput.disabled = true;
+                    elements.sendButton.disabled = true;
+                    elements.endSessionButton.disabled = true;
+                    elements.chatLog.innerHTML = '<div class="empty">새 세션을 생성하면 대화를 시작할 수 있습니다.</div>';
+                    renderSessionMeta(null);
+                    renderSourcesFromMessage(null);
+                }
+            } catch (error) {
+                console.error(error);
+                showToast(error.message || '세션 목록을 가져오지 못했습니다.', 'error');
+            }
+        }
+
+        async function loadMessages(sessionId) {
+            if (!sessionId) return;
+            try {
+                const messages = await fetchJSON(`${API_BASE_URL}/chat/sessions/${sessionId}/messages`);
+                state.messages = Array.isArray(messages) ? messages : [];
+                renderMessages();
+                const lastAssistant = [...state.messages].reverse().find((msg) => msg.role === 'assistant');
+                renderSourcesFromMessage(lastAssistant || null);
+                const session = state.sessions.find((s) => s.id === sessionId);
+                if (session?.resolved) {
+                    elements.messageInput.disabled = true;
+                    elements.sendButton.disabled = true;
+                } else {
+                    elements.messageInput.disabled = false;
+                    elements.sendButton.disabled = false;
+                    elements.messageInput.focus();
+                }
+            } catch (error) {
+                console.error(error);
+                state.messages = [];
+                renderMessages();
+                renderSourcesFromMessage(null);
+                showToast(error.message || '메시지를 불러오지 못했습니다.', 'error');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadSessions();
+        });
+    </script>
+</body>
+
+</html>
