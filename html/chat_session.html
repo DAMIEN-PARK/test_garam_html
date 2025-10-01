@@ -97,6 +97,105 @@
             transition: var(--transition);
         }
 
+        .api-status-card {
+            padding: 14px 16px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: rgba(15, 23, 42, 0.03);
+            display: grid;
+            gap: 12px;
+            transition: var(--transition);
+        }
+
+        .api-status-card .api-status-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .api-status-card .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--border);
+            box-shadow: 0 0 0 4px rgba(148, 163, 184, 0.2);
+        }
+
+        .api-status-card .status-text {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .api-status-card .status-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .api-status-card .status-message {
+            font-size: 13px;
+            color: var(--text-primary);
+        }
+
+        .api-status-card .api-status-url {
+            font-size: 12px;
+            color: var(--text-secondary);
+            word-break: break-all;
+        }
+
+        .api-status-card .api-status-actions {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px;
+        }
+
+        .api-status-card .status-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 8px 10px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: white;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .api-status-card .status-button:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .api-status-card.connected {
+            border-color: rgba(22, 163, 74, 0.4);
+            background: rgba(22, 163, 74, 0.08);
+        }
+
+        .api-status-card.connected .status-dot {
+            background: var(--success);
+            box-shadow: 0 0 0 4px rgba(22, 163, 74, 0.2);
+        }
+
+        .api-status-card.disconnected {
+            border-color: rgba(220, 38, 38, 0.35);
+            background: rgba(220, 38, 38, 0.08);
+        }
+
+        .api-status-card.disconnected .status-dot {
+            background: var(--danger);
+            box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.15);
+        }
+
+        .api-status-card.checking .status-dot {
+            background: var(--text-secondary);
+            animation: pulse 1.4s infinite ease-in-out;
+        }
+
         .session-controls input[type="text"]:focus {
             outline: none;
             border-color: var(--primary);
@@ -433,8 +532,16 @@
         .context-panel .section {
             padding: 16px 24px;
             border-bottom: 1px solid var(--border);
+        }
+
+        .context-panel .section.flex {
             flex: 1;
             overflow-y: auto;
+        }
+
+        .context-panel .section.condensed {
+            flex: none;
+            overflow: visible;
         }
 
         .context-panel .section:last-child {
@@ -444,6 +551,104 @@
         .context-panel .empty {
             font-size: 13px;
             color: var(--text-secondary);
+        }
+
+        .knowledge-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .knowledge-header h4 {
+            margin: 0;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .knowledge-refresh {
+            border: 1px solid var(--border);
+            background: white;
+            color: var(--text-secondary);
+            border-radius: 8px;
+            padding: 6px 10px;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .knowledge-refresh:hover:not(:disabled) {
+            color: var(--primary);
+            border-color: var(--primary);
+        }
+
+        .knowledge-refresh:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .knowledge-list {
+            display: grid;
+            gap: 10px;
+        }
+
+        .knowledge-item {
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 10px 12px;
+            background: rgba(15, 23, 42, 0.02);
+            display: grid;
+            gap: 6px;
+        }
+
+        .knowledge-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .knowledge-meta {
+            font-size: 12px;
+            color: var(--text-secondary);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .knowledge-preview {
+            font-size: 12px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        .knowledge-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            font-weight: 500;
+            padding: 2px 8px;
+            border-radius: 999px;
+        }
+
+        .knowledge-status.processing {
+            background: rgba(30, 96, 225, 0.12);
+            color: var(--primary);
+        }
+
+        .knowledge-status.active {
+            background: rgba(22, 163, 74, 0.15);
+            color: var(--success);
+        }
+
+        .knowledge-status.error {
+            background: rgba(220, 38, 38, 0.15);
+            color: var(--danger);
         }
 
         .source-card {
@@ -533,6 +738,19 @@
             }
         }
 
+        @keyframes pulse {
+            0%,
+            100% {
+                opacity: 0.4;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 1;
+                transform: scale(1.2);
+            }
+        }
+
         @media (max-width: 1280px) {
             :root {
                 --context-width: 260px;
@@ -594,6 +812,26 @@
             <div class="session-controls">
                 <input type="text" id="sessionSearch" placeholder="세션 검색" autocomplete="off">
                 <button id="newSessionButton"><i class="fa-solid fa-plus"></i>&nbsp; 새 채팅 시작</button>
+                <div class="api-status-card checking" id="apiStatusCard" aria-live="polite">
+                    <div class="api-status-header">
+                        <span class="status-dot" id="apiStatusDot" aria-hidden="true"></span>
+                        <div class="status-text">
+                            <div class="status-title">LLM 연결 상태</div>
+                            <div class="status-message" id="apiStatusMessage">연결 확인 중...</div>
+                        </div>
+                    </div>
+                    <div class="api-status-url" id="apiBaseUrlLabel"></div>
+                    <div class="api-status-actions">
+                        <button type="button" class="status-button" id="checkApiButton">
+                            <i class="fa-solid fa-plug-circle-check"></i>
+                            연결 확인
+                        </button>
+                        <button type="button" class="status-button" id="editApiButton">
+                            <i class="fa-solid fa-gear"></i>
+                            주소 설정
+                        </button>
+                    </div>
+                </div>
             </div>
             <div class="session-list" id="sessionList">
                 <div class="empty">세션을 불러오는 중입니다...</div>
@@ -632,10 +870,22 @@
             <header>
                 <h3>지식베이스 컨텍스트</h3>
             </header>
-            <div class="section" id="sourceSection">
+            <div class="section flex" id="knowledgeSection">
+                <div class="knowledge-header">
+                    <h4>업로드된 문서</h4>
+                    <button type="button" class="knowledge-refresh" id="refreshKnowledgeButton">
+                        <i class="fa-solid fa-rotate"></i>
+                        새로고침
+                    </button>
+                </div>
+                <div class="knowledge-list" id="knowledgeList">
+                    <div class="empty">LLM 연결을 확인하면 지식베이스 문서가 표시됩니다.</div>
+                </div>
+            </div>
+            <div class="section flex" id="sourceSection">
                 <div class="empty">가장 최근 답변에서 활용한 문서가 여기에 표시됩니다.</div>
             </div>
-            <div class="section">
+            <div class="section condensed">
                 <h4>세션 정보</h4>
                 <div class="session-meta" id="sessionMeta">
                     <span>선택된 세션이 없습니다.</span>
@@ -647,9 +897,12 @@
     <div class="toast-container" id="toastContainer"></div>
 
     <script>
-        const API_BASE_URL = localStorage.getItem('garam_api_base_url') || 'http://localhost:5000';
+        const API_STORAGE_KEY = 'garam_api_base_url';
         const SESSION_STORAGE_KEY = 'garampos_chat_selected_session';
         const SEARCH_DEBOUNCE = 200;
+        const DEFAULT_API_BASE_URL = 'http://localhost:5000';
+
+        let API_BASE_URL = localStorage.getItem(API_STORAGE_KEY) || DEFAULT_API_BASE_URL;
 
         const state = {
             sessions: [],
@@ -658,6 +911,10 @@
             currentSessionId: null,
             typingTimer: null,
             isSending: false,
+            isApiConnected: false,
+            isCheckingApi: false,
+            knowledgeDocuments: [],
+            isKnowledgeLoading: false,
         };
 
         const elements = {
@@ -676,7 +933,220 @@
             sourceSection: document.getElementById('sourceSection'),
             sessionMeta: document.getElementById('sessionMeta'),
             toastContainer: document.getElementById('toastContainer'),
+            apiStatusCard: document.getElementById('apiStatusCard'),
+            apiStatusMessage: document.getElementById('apiStatusMessage'),
+            apiBaseUrlLabel: document.getElementById('apiBaseUrlLabel'),
+            checkApiButton: document.getElementById('checkApiButton'),
+            editApiButton: document.getElementById('editApiButton'),
+            knowledgeList: document.getElementById('knowledgeList'),
+            refreshKnowledgeButton: document.getElementById('refreshKnowledgeButton'),
         };
+
+        function normalizeApiBaseUrl(value) {
+            const raw = (value || '').trim();
+            if (!raw) {
+                throw new Error('API 기본 주소를 입력해주세요.');
+            }
+            let candidate = raw;
+            if (!/^https?:\/\//i.test(candidate)) {
+                candidate = `http://${candidate}`;
+            }
+            const url = new URL(candidate);
+            const pathname = url.pathname.replace(/\/+$/, '');
+            const normalizedPath = pathname === '/' ? '' : pathname;
+            return `${url.origin}${normalizedPath}`;
+        }
+
+        function setApiBaseUrl(newUrl, options = {}) {
+            const { persist = true } = options;
+            const normalized = normalizeApiBaseUrl(newUrl);
+            API_BASE_URL = normalized;
+            if (persist) {
+                localStorage.setItem(API_STORAGE_KEY, normalized);
+            }
+            updateApiBaseUrlLabel();
+            return normalized;
+        }
+
+        function updateApiBaseUrlLabel() {
+            if (elements.apiBaseUrlLabel) {
+                elements.apiBaseUrlLabel.textContent = `엔드포인트: ${API_BASE_URL}`;
+            }
+        }
+
+        function updateApiStatus(status, message) {
+            if (!elements.apiStatusCard) {
+                return;
+            }
+            elements.apiStatusCard.classList.remove('connected', 'disconnected', 'checking');
+            elements.apiStatusCard.classList.add(status);
+            elements.apiStatusCard.setAttribute('data-status', status);
+            elements.apiStatusCard.setAttribute('aria-label', `LLM 연결 상태: ${message}`);
+            if (elements.apiStatusMessage) {
+                elements.apiStatusMessage.textContent = message;
+            }
+        }
+
+        function escapeHtml(value) {
+            if (typeof value !== 'string') {
+                return '';
+            }
+            return value
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function formatFileSize(bytes) {
+            if (!Number.isFinite(bytes)) {
+                return '-';
+            }
+            const units = ['B', 'KB', 'MB', 'GB'];
+            let size = bytes;
+            let unitIndex = 0;
+            while (size >= 1024 && unitIndex < units.length - 1) {
+                size /= 1024;
+                unitIndex += 1;
+            }
+            return `${unitIndex === 0 ? Math.round(size) : size.toFixed(1)}${units[unitIndex]}`;
+        }
+
+        function getKnowledgeStatusMeta(status) {
+            const normalized = (status || '').toLowerCase();
+            if (normalized === 'active') {
+                return { label: '사용중', className: 'active' };
+            }
+            if (normalized === 'error') {
+                return { label: '오류', className: 'error' };
+            }
+            if (normalized === 'uploaded') {
+                return { label: '등록됨', className: 'processing' };
+            }
+            return { label: '처리중', className: 'processing' };
+        }
+
+        function renderKnowledgeDocuments() {
+            if (!elements.knowledgeList) {
+                return;
+            }
+
+            if (elements.refreshKnowledgeButton) {
+                const disabled = !state.isApiConnected || state.isKnowledgeLoading;
+                elements.refreshKnowledgeButton.disabled = disabled;
+                elements.refreshKnowledgeButton.setAttribute('aria-disabled', disabled ? 'true' : 'false');
+            }
+
+            if (!state.isApiConnected) {
+                elements.knowledgeList.innerHTML = '<div class="empty">LLM 연결 후 문서 목록을 확인할 수 있습니다.</div>';
+                return;
+            }
+
+            if (state.isKnowledgeLoading) {
+                elements.knowledgeList.innerHTML = '<div class="empty">문서를 불러오는 중...</div>';
+                return;
+            }
+
+            if (!state.knowledgeDocuments.length) {
+                elements.knowledgeList.innerHTML = '<div class="empty">업로드된 문서가 없습니다.</div>';
+                return;
+            }
+
+            const items = state.knowledgeDocuments.slice(0, 6).map((doc, index) => {
+                const title = escapeHtml(doc.original_name || doc.name || `문서 ${index + 1}`);
+                const previewRaw = escapeHtml(doc.preview || doc.excerpt || '');
+                const preview = previewRaw.length > 140 ? `${previewRaw.slice(0, 140)}…` : previewRaw;
+                const sizeLabel = typeof doc.size === 'number' ? formatFileSize(doc.size) : '-';
+                const createdAt = formatDate(doc.created_at || doc.updated_at || doc.uploaded_at);
+                const { label, className } = getKnowledgeStatusMeta(doc.status);
+
+                return `
+                    <div class="knowledge-item">
+                        <div class="knowledge-title">${title}</div>
+                        <div class="knowledge-meta">
+                            <span>${sizeLabel}</span>
+                            <span>${createdAt}</span>
+                            <span class="knowledge-status ${className}">${label}</span>
+                        </div>
+                        ${preview ? `<div class="knowledge-preview">${preview}</div>` : ''}
+                    </div>
+                `;
+            }).join('');
+
+            elements.knowledgeList.innerHTML = items;
+        }
+
+        async function loadKnowledgeDocuments(options = {}) {
+            const { suppressToast = false } = options;
+            if (!state.isApiConnected) {
+                state.knowledgeDocuments = [];
+                state.isKnowledgeLoading = false;
+                renderKnowledgeDocuments();
+                return;
+            }
+
+            if (state.isKnowledgeLoading) {
+                return;
+            }
+
+            state.isKnowledgeLoading = true;
+            renderKnowledgeDocuments();
+
+            try {
+                const docs = await fetchJSON(`${API_BASE_URL}/knowledge?limit=20`);
+                state.knowledgeDocuments = Array.isArray(docs) ? docs : [];
+                if (!suppressToast) {
+                    showToast('지식베이스 문서를 새로고침했습니다.', 'success');
+                }
+            } catch (error) {
+                console.error('지식베이스 문서 로드 실패:', error);
+                state.knowledgeDocuments = [];
+                if (!suppressToast) {
+                    showToast(error.message || '지식베이스 문서를 불러오지 못했습니다.', 'error');
+                }
+            } finally {
+                state.isKnowledgeLoading = false;
+                renderKnowledgeDocuments();
+            }
+        }
+
+        function getCurrentSession() {
+            if (!state.currentSessionId) {
+                return null;
+            }
+            return state.sessions.find((session) => session.id === state.currentSessionId) || null;
+        }
+
+        function shouldDisableComposer(session) {
+            if (state.isSending) {
+                return true;
+            }
+            if (!state.isApiConnected) {
+                return true;
+            }
+            if (!session) {
+                return true;
+            }
+            return !!session.resolved;
+        }
+
+        function applyComposerState(session) {
+            const targetSession = session || getCurrentSession();
+            const disabled = shouldDisableComposer(targetSession);
+            if (elements.messageInput) {
+                elements.messageInput.disabled = disabled;
+            }
+            if (elements.sendButton) {
+                elements.sendButton.disabled = disabled;
+            }
+            if (!disabled && elements.messageInput) {
+                elements.messageInput.focus();
+            }
+        }
+
+        updateApiBaseUrlLabel();
+        updateApiStatus('checking', '연결 확인 중...');
 
         function formatDate(isoString) {
             if (!isoString) return '-';
@@ -736,6 +1206,50 @@
                 const fallback = new Error('네트워크 오류가 발생했습니다.');
                 fallback.status = 0;
                 throw fallback;
+            }
+        }
+
+        async function checkLLMConnection(options = {}) {
+            const { showSuccessToast = false, suppressErrorToast = false } = options;
+            if (state.isCheckingApi) {
+                return state.isApiConnected;
+            }
+
+            state.isCheckingApi = true;
+            updateApiStatus('checking', '연결 확인 중...');
+            try {
+                const model = await fetchJSON(`${API_BASE_URL}/models/active`);
+                if (!model) {
+                    throw new Error('활성화된 모델 정보를 가져오지 못했습니다.');
+                }
+                state.isApiConnected = true;
+                const provider = model.provider_name || 'LLM';
+                const modelName = model.name || '활성 모델';
+                const statusSuffix = model.status_text ? ` · ${model.status_text}` : '';
+                updateApiStatus('connected', `${provider} · ${modelName}${statusSuffix}`);
+                if (showSuccessToast) {
+                    showToast('LLM 연결이 확인되었습니다.', 'success');
+                }
+                applyComposerState(getCurrentSession());
+                await loadKnowledgeDocuments({ suppressToast: true });
+                return true;
+            } catch (error) {
+                state.isApiConnected = false;
+                let message = error instanceof Error ? error.message : 'LLM 연결을 확인할 수 없습니다.';
+                if (/active model/i.test(message)) {
+                    message = '활성화된 LLM 모델이 설정되어 있지 않습니다.';
+                } else if (/HTTP\s*404/i.test(message)) {
+                    message = 'LLM 엔드포인트를 찾을 수 없습니다.';
+                }
+                updateApiStatus('disconnected', message);
+                applyComposerState(null);
+                renderKnowledgeDocuments();
+                if (!suppressErrorToast) {
+                    showToast(message, 'error');
+                }
+                return false;
+            } finally {
+                state.isCheckingApi = false;
             }
         }
 
@@ -971,6 +1485,65 @@
             searchTimer = setTimeout(() => applySearchFilter(value), SEARCH_DEBOUNCE);
         });
 
+        if (elements.checkApiButton) {
+            elements.checkApiButton.addEventListener('click', () => {
+                checkLLMConnection({ showSuccessToast: true });
+            });
+        }
+
+        if (elements.editApiButton) {
+            elements.editApiButton.addEventListener('click', async () => {
+                const current = API_BASE_URL;
+                const input = prompt('LLM API 기본 주소를 입력하세요.', current);
+                if (input === null) {
+                    return;
+                }
+                try {
+                    const previousBaseUrl = API_BASE_URL;
+                    const normalized = setApiBaseUrl(input);
+                    if (normalized === previousBaseUrl) {
+                        showToast('입력한 주소가 현재와 동일합니다. 연결 상태를 다시 확인합니다.', 'info');
+                        const rechecked = await checkLLMConnection({ showSuccessToast: true });
+                        if (rechecked) {
+                            await loadSessions(state.currentSessionId);
+                        }
+                        return;
+                    }
+                    state.isApiConnected = false;
+                    applyComposerState(null);
+                    state.currentSessionId = null;
+                    state.sessions = [];
+                    state.filteredSessions = [];
+                    state.messages = [];
+                    state.knowledgeDocuments = [];
+                    renderSessionList();
+                    elements.chatLog.innerHTML = '<div class="empty">새 API 주소에 연결 중입니다. 연결을 확인하세요.</div>';
+                    renderSessionMeta(null);
+                    renderSourcesFromMessage(null);
+                    renderKnowledgeDocuments();
+                    elements.chatTitle.textContent = '세션을 선택하세요';
+                    elements.chatSubtitle.textContent = 'LLM 연결을 확인하면 대화를 시작할 수 있습니다.';
+                    if (elements.messageInput) {
+                        elements.messageInput.value = '';
+                    }
+                    showToast('API 기본 주소가 저장되었습니다.', 'success');
+                    const connected = await checkLLMConnection({ showSuccessToast: true });
+                    if (connected) {
+                        await loadSessions(state.currentSessionId);
+                    }
+                } catch (error) {
+                    const message = error instanceof Error ? error.message : '유효한 주소를 입력해주세요.';
+                    showToast(message, 'error');
+                }
+            });
+        }
+
+        if (elements.refreshKnowledgeButton) {
+            elements.refreshKnowledgeButton.addEventListener('click', () => {
+                loadKnowledgeDocuments();
+            });
+        }
+
         elements.newSessionButton.addEventListener('click', async () => {
             const title = prompt('새 세션 제목을 입력하세요.', '새 상담 세션');
             if (title === null) {
@@ -1016,7 +1589,7 @@
         elements.messageForm.addEventListener('submit', async (event) => {
             event.preventDefault();
             const question = elements.messageInput.value.trim();
-            if (!question || !state.currentSessionId || state.isSending) {
+            if (!question || !state.currentSessionId || state.isSending || !state.isApiConnected) {
                 return;
             }
 
@@ -1102,15 +1675,7 @@
                 showToast(error.message || 'LLM 응답 요청에 실패했습니다.', 'error');
             } finally {
                 state.isSending = false;
-                const session = state.sessions.find((s) => s.id === state.currentSessionId);
-                if (session?.resolved) {
-                    elements.messageInput.disabled = true;
-                    elements.sendButton.disabled = true;
-                } else {
-                    elements.messageInput.disabled = false;
-                    elements.sendButton.disabled = false;
-                    elements.messageInput.focus();
-                }
+                applyComposerState();
             }
         });
 
@@ -1171,12 +1736,18 @@
                 ? '종료된 세션입니다. 추가 질문을 하려면 새 채팅을 생성하세요.'
                 : '지식베이스 기반 답변을 얻으려면 질문을 입력하세요.';
             elements.endSessionButton.disabled = !!session?.resolved;
-            elements.messageInput.disabled = !!session?.resolved;
-            elements.sendButton.disabled = !!session?.resolved;
             renderSessionMeta(session);
             renderSessionList();
 
+            if (elements.messageInput) {
+                elements.messageInput.disabled = true;
+            }
+            if (elements.sendButton) {
+                elements.sendButton.disabled = true;
+            }
+
             await loadMessages(sessionId);
+            applyComposerState(session);
         }
 
         async function loadSessions(selectSessionId = null) {
@@ -1196,8 +1767,7 @@
                     state.currentSessionId = null;
                     elements.chatTitle.textContent = '세션을 선택하세요';
                     elements.chatSubtitle.textContent = 'LangChain에 연결된 OpenAI 모델이 지식베이스 기반 답변을 제공합니다.';
-                    elements.messageInput.disabled = true;
-                    elements.sendButton.disabled = true;
+                    applyComposerState(null);
                     elements.endSessionButton.disabled = true;
                     elements.chatLog.innerHTML = '<div class="empty">새 세션을 생성하면 대화를 시작할 수 있습니다.</div>';
                     renderSessionMeta(null);
@@ -1205,6 +1775,7 @@
                 }
             } catch (error) {
                 console.error(error);
+                applyComposerState(null);
                 showToast(error.message || '세션 목록을 가져오지 못했습니다.', 'error');
             }
         }
@@ -1218,25 +1789,38 @@
                 const lastAssistant = [...state.messages].reverse().find((msg) => msg.role === 'assistant');
                 renderSourcesFromMessage(lastAssistant || null);
                 const session = state.sessions.find((s) => s.id === sessionId);
-                if (session?.resolved) {
-                    elements.messageInput.disabled = true;
-                    elements.sendButton.disabled = true;
-                } else {
-                    elements.messageInput.disabled = false;
-                    elements.sendButton.disabled = false;
-                    elements.messageInput.focus();
-                }
+                applyComposerState(session);
             } catch (error) {
                 console.error(error);
                 state.messages = [];
                 renderMessages();
                 renderSourcesFromMessage(null);
+                applyComposerState(null);
                 showToast(error.message || '메시지를 불러오지 못했습니다.', 'error');
             }
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
-            loadSessions();
+        renderKnowledgeDocuments();
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                setApiBaseUrl(API_BASE_URL);
+            } catch (error) {
+                console.warn('API 기본 주소 초기화 실패:', error);
+                try {
+                    setApiBaseUrl(DEFAULT_API_BASE_URL);
+                } catch (innerError) {
+                    console.warn('기본 API 주소 설정에도 실패했습니다.', innerError);
+                }
+            }
+
+            try {
+                await checkLLMConnection({ suppressErrorToast: true });
+            } catch (error) {
+                console.error('LLM 연결 확인 중 오류:', error);
+            }
+
+            await loadSessions();
         });
     </script>
 </body>
