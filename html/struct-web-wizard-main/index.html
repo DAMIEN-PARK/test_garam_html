@@ -945,7 +945,7 @@
           top_k: topK,
           knowledge_id: knowledgeValue ? Number(knowledgeValue) : null,
         };
-        const response = await fetch(`${state.baseUrl}/llm/chat/sessions/${state.sessionId}/qa`, {
+        const response = await fetch(`${state.baseUrl}/chat/sessions/${state.sessionId}/qa`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
